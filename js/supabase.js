@@ -133,34 +133,16 @@ async function insertBrief(brief) {
 // 标注操作
 // ============================================
 
-/** 添加标注 */
+/** 添加标注（本机隔离，不再写入公共表） */
 async function insertAnnotation(annotation) {
-  var client = getClient();
-  var result = await client
-    .from('annotations')
-    .insert([{
-      brief_id: annotation.brief_id || null,
-      selected_text: annotation.selected_text,
-      annotation_type: annotation.annotation_type,
-      tags: annotation.tags || [],
-      note: annotation.note || null
-    }])
-    .select();
-  if (result.error) throw result.error;
-  return result.data[0];
+  if (typeof UserStore === 'undefined') throw new Error('UserStore 未加载');
+  return UserStore.toggleAnnotation(annotation).record;
 }
 
-/** 获取所有标注 */
+/** 获取当前访客的标注 */
 async function fetchAnnotations(filter) {
-  filter = filter || {};
-  var client = getClient();
-  var query = client.from('annotations').select('*, briefs(*)').order('created_at', { ascending: false });
-  if (filter.type) query = query.eq('annotation_type', filter.type);
-  if (filter.tag) query = query.contains('tags', [filter.tag]);
-  if (filter.briefId) query = query.eq('brief_id', filter.briefId);
-  var result = await query;
-  if (result.error) throw result.error;
-  return result.data || [];
+  if (typeof UserStore === 'undefined') return [];
+  return UserStore.listAnnotations(filter || {});
 }
 
 /** 搜索标注 */
@@ -177,6 +159,10 @@ async function searchAnnotations(keyword) {
 
 /** 删除标注 */
 async function deleteAnnotation(id) {
+  if (typeof UserStore !== 'undefined') {
+    UserStore.deleteAnnotation(id);
+    return;
+  }
   var client = getClient();
   var result = await client.from('annotations').delete().eq('id', id);
   if (result.error) throw result.error;
@@ -198,8 +184,11 @@ async function updateAnnotation(id, updates) {
 // 追踪线索操作
 // ============================================
 
-/** 获取所有追踪线索 */
+/** 获取当前访客的追踪线索 */
 async function fetchTracks() {
+  if (typeof UserStore !== 'undefined') {
+    return UserStore.listTracks();
+  }
   var client = getClient();
   var result = await client
     .from('tracks')
@@ -257,17 +246,10 @@ async function insertTrackItem(item) {
 
 /** 获取标注数量统计 */
 async function fetchAnnotationStats() {
-  var client = getClient();
-  var result = await client
-    .from('annotations')
-    .select('annotation_type');
-  if (result.error) throw result.error;
-  var stats = { star: 0, important: 0, track: 0, total: 0 };
-  (result.data || []).forEach(function(item) {
-    if (stats[item.annotation_type] !== undefined) stats[item.annotation_type]++;
-    stats.total++;
-  });
-  return stats;
+  if (typeof UserStore !== 'undefined') {
+    return UserStore.stats();
+  }
+  return { star: 0, important: 0, track: 0, total: 0 };
 }
 
 // 导出到全局
