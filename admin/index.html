@@ -4,11 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
   <title>管理写入 - 阿鹏资讯站</title>
-  <meta name="description" content="阿鹏资讯站管理写入页面。粘贴Markdown格式简报内容，选择日期和时段后写入Supabase数据库。支持预览解析、标签管理、批量写入和最近记录管理。">
+  <meta name="description" content="阿鹏资讯站管理写入页面。粘贴Markdown格式简报内容，选择日期和时段后写入Supabase数据库。">
+  <meta name="robots" content="noindex, nofollow">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✍️</text></svg>">
   <link rel="stylesheet" href="../styles/admin.css">
 </head>
-<body>
+<body class="locked">
+
+  <!-- 密码门禁（密码 apeng2026，验证通过后本会话内免输，刷新需重输） -->
+  <div class="gate" id="gate">
+    <div class="gate-card">
+      <div class="gate-icon">🔒</div>
+      <h1>管理写入</h1>
+      <p class="gate-sub">这里只有阿鹏能用，请输入访问密码</p>
+      <input type="password" id="gateInput" placeholder="输入密码" autocomplete="current-password">
+      <button class="btn btn-primary" id="gateBtn">进入</button>
+      <p class="gate-error" id="gateError"></p>
+    </div>
+  </div>
 
   <!-- 顶部导航 -->
   <header class="topbar">
@@ -20,8 +33,8 @@
   <div class="container">
 
     <div class="hint">
-      💡 在下方粘贴 Markdown 格式的简报内容，使用 <code>## 标题</code> 分隔每条新闻条目，系统会自动解析。<br>
-      写入后可在 <a href="../">阿鹏资讯站</a> 首页查看效果。
+      💡 在下方粘贴 Markdown 格式的简报内容，用 <code>## 板块名</code> 分隔板块（如 <code>## 🔥 热榜速览</code>），系统会自动解析成板块与条目。<br>
+      写入后可在 <a href="../">阿鹏资讯站</a> 首页按板块查看效果。
     </div>
 
     <!-- 写入表单 -->
@@ -59,11 +72,18 @@
         <label>📄 简报内容（Markdown）</label>
         <textarea id="briefContent" placeholder="在此粘贴 Markdown 内容...
 
-## 第一条新闻标题
-新闻正文内容...
+# 阿鹏夜间简报 · 2026-10-01
 
-## 第二条新闻标题
-新闻正文内容..."></textarea>
+## 🔥 热榜速览
+- 华为与赛力斯达成新五年合作 → 头条2326万热、微博热搜第1
+
+## ⚡ 深度信号
+1. 美防长宣布组建自主作战司令部 → 这条被国内热榜完全忽略
+
+## 📈 市场（美股/加密/大宗）
+| 品种 | 涨跌 | 判断 |
+|------|------|------|
+| 道琼斯 | -0.86% | 债务情绪拖累 |"></textarea>
       </div>
 
       <div class="btn-group">
@@ -92,7 +112,47 @@
   <div class="toast" id="toast"></div>
 
   <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="../js/vendor/supabase.min.js"></script>
+  <script>window.supabase || document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"><\/script>');</script>
   <script src="../js/admin.js"></script>
+  <script>
+    /* 密码门禁：密码 apeng2026，只存在 sessionStorage，刷新要重输 */
+    (function () {
+      var PASSWORD = 'apeng2026';
+      var KEY = 'apeng_admin_ok';
+
+      function unlock() {
+        document.body.classList.remove('locked');
+        var gate = document.getElementById('gate');
+        if (gate) gate.remove();
+      }
+
+      if (sessionStorage.getItem(KEY) === '1') {
+        unlock();
+        return;
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        var input = document.getElementById('gateInput');
+        var btn = document.getElementById('gateBtn');
+        var err = document.getElementById('gateError');
+
+        function submit() {
+          if (input.value === PASSWORD) {
+            sessionStorage.setItem(KEY, '1');
+            unlock();
+          } else {
+            err.textContent = '无权限访问：密码不正确';
+            input.value = '';
+            input.focus();
+          }
+        }
+
+        btn.addEventListener('click', submit);
+        input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+        input.focus();
+      });
+    })();
+  </script>
 </body>
 </html>
