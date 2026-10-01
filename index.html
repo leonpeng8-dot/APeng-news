@@ -2,15 +2,18 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <meta name="theme-color" content="#FF6B35">
+  <meta name="format-detection" content="telephone=no">
   <title>阿鹏资讯站 - 每日策展简报</title>
-  <meta name="description" content="阿鹏资讯站是Peng老师的个人策展平台。AI每日抓取金融、科技、AI工具、加密货币等领域的最新资讯，整理为早间、午间、晚间、夜间四个时段简报。支持划词标注、收藏重要信息、追踪线索和多引擎搜索。">
+  <meta name="description" content="阿鹏资讯站是Peng老师的个人策展平台。AI每日抓取金融、科技、AI工具、加密货币等领域的最新资讯，整理为早间、午间、晚间、夜间四个时段简报。支持划词标注、收藏重点、追踪线索和存到Obsidian。">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
+  <link rel="preload" href="styles/main.css" as="style">
   <link rel="stylesheet" href="styles/main.css">
   <script>
-    if (new URLSearchParams(location.search).get('admin') === '1') {
-      location.replace('./admin/');
-    }
+    (function () {
+      if (new URLSearchParams(location.search).get('admin') === '1') location.replace('./admin/');
+    })();
   </script>
 </head>
 <body>
@@ -22,7 +25,7 @@
     <div class="date-today" id="dateToday"></div>
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
-      <input type="text" id="searchInput" placeholder="搜索简报内容..." autocomplete="off">
+      <input type="text" id="searchInput" placeholder="搜索简报内容..." autocomplete="off" enterkeyhint="search">
     </div>
     <a href="./admin/" class="admin-link">管理</a>
   </header>
@@ -49,6 +52,12 @@
         <div class="nav-item" data-view="tracks">
           <span class="icon">🔍</span> 追踪线索
         </div>
+      </div>
+      <div class="nav-group nav-tip">
+        <h4>用法</h4>
+        <p>选中文字 → 菜单在文字下方弹出</p>
+        <p>每条消息右下角 → 收藏 / 重点 / 追踪 / Obsidian</p>
+        <p>收藏与重点只存在本机，别人看不到</p>
       </div>
     </aside>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -89,11 +98,26 @@
     </button>
   </nav>
 
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- 依赖包：优先本地文件（国内/微信打开更快），失败再回退 CDN -->
+  <script src="js/vendor/marked.min.js"></script>
+  <script>window.marked || document.write('<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>');</script>
+  <script src="js/vendor/supabase.min.js"></script>
+  <script>window.supabase || document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"><\/script>');</script>
+
+  <!-- 应用代码 -->
+  <script src="js/userstore.js"></script>
   <script src="js/supabase.js"></script>
+  <script src="js/hot.js"></script>
   <script src="js/annotation.js"></script>
   <script src="js/app.js"></script>
+
+  <!-- 离线缓存 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function () {});
+      });
+    }
+  </script>
 </body>
 </html>
