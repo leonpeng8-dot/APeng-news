@@ -4,11 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
   <title>阿鹏资讯站 - 每日策展简报</title>
-  <meta name="description" content="阿鹏资讯站是Peng老师的个人策展平台。系统由AI每日自动抓取金融、科技、AI工具、加密货币等领域的最新资讯，整理为早间、午间、晚间、夜间四个时段的简报推送到网站。用户可在简报中划词标注、收藏重要信息、标记关键内容、建立追踪线索，并支持百度、Google、B站、微信多引擎深度搜索。界面采用深色主题、卡片式布局、Markdown渲染、新闻条目卡片展示，完整适配移动端和微信内置浏览器。">
+  <meta name="description" content="阿鹏资讯站是Peng老师的个人策展平台。AI每日抓取金融、科技、AI工具、加密货币等领域的最新资讯，整理为早间、午间、晚间、夜间四个时段简报。支持划词标注、收藏重要信息、追踪线索和多引擎搜索。">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
   <link rel="stylesheet" href="styles/main.css">
   <script>
-    // 管理入口: ?admin=1 跳转到管理页面
     if (new URLSearchParams(location.search).get('admin') === '1') {
       location.replace('./admin/');
     }
@@ -19,12 +18,13 @@
   <!-- 顶部导航栏 -->
   <header class="topbar">
     <button class="menu-btn" id="menuBtn" aria-label="菜单">☰</button>
-    <div class="logo" title="阿鹏资讯">阿鹏资讯</div>
+    <div class="logo" title="阿鹏资讯">阿鹏<span class="accent">资讯</span></div>
     <div class="date-today" id="dateToday"></div>
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
       <input type="text" id="searchInput" placeholder="搜索简报内容..." autocomplete="off">
     </div>
+    <a href="./admin/" class="admin-link">管理</a>
   </header>
 
   <!-- 主布局 -->
