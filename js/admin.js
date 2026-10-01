@@ -118,25 +118,82 @@ const Admin = (function() {
     });
   }
 
-  // === Markdown 解析条目 ===
-  function parseMarkdownItems(content) {
-    if (!content || !content.trim()) return [];
-    var parts = content.split(/^## /m);
-    if (parts.length <= 1) {
-      var h3parts = content.split(/^### /m);
-      if (h3parts.length > 1) {
-        return h3parts.slice(1).map(function(part) {
-          var lines = part.trim().split('\n');
-          return { title: lines[0].trim(), content: lines.slice(1).join('\n').trim() };
-        });
+  // === Markdown 解析：先按 ## 切板块，再把板块正文切成条目 ===
+  function splitSections(content) {
+    var lines = String(content || '').replace(/[\r\n]/g, '\n').split('\n');
+    var out = [];
+    var cur = { heading: '', level: 0, lines: [] };
+    var seen = false;
+    lines.forEach(function (line) {
+      var m = /^(#{1,2})\s+(.+?)\s*$/.exec(line);
+      if (m) {
+        if (cur.heading || cur.lines.join('').trim() || seen) out.push(cur);
+        cur = { heading: m[2].trim(), level: m[1].length, lines: [] };
+        seen = true;
+        return;
       }
-      return [{ title: '', content: content.trim() }];
-    }
-    return parts.slice(1).map(function(part) {
-      var trimmed = part.trim();
-      var lines = trimmed.split('\n');
-      return { title: lines[0].trim(), content: lines.slice(1).join('\n').trim() };
+      cur.lines.push(line);
     });
+    out.push(cur);
+    return out.filter(function (s) {
+      return (s.heading && s.heading.trim()) || s.lines.join('').replace(/[-*\s]/g, '').trim();
+    });
+  }
+
+  function parseItems(body) {
+    var lines = String(body || '').replace(/[\r\n]/g, '\n').split('\n');
+    var items = [];
+    var sub = '';
+    var pendingTable = null;
+    var lastLead = '';
+
+    function flushTable() {
+      if (pendingTable && pendingTable.length) {
+        var block = pendingTable.join('\n').trim();
+        if (block) items.push({ text: block, lead: lastLead, sub: sub });
+      }
+      pendingTable = null;
+    }
+
+    lines.forEach(function (raw) {
+      var line = raw.replace(/\s+$/, '');
+      var h3 = /^###\s+(.+?)\s*$/.exec(line);
+      if (h3) { flushTable(); sub = h3[1].trim(); return; }
+      if (!line.trim()) { flushTable(); return; }
+      if (/^\s*\|.*\|\s*$/.test(line)) {
+        if (!pendingTable) pendingTable = [];
+        pendingTable.push(line.trim());
+        return;
+      }
+      flushTable();
+      var li = /^\s*(?:[-*+]|\d+[.、)]|•)\s+(.*)$/.exec(line);
+      if (li && !/^\s{2,}/.test(line)) { items.push({ text: li[1].trim(), lead: lastLead, sub: sub }); return; }
+      if (/^\s{2,}(?:[-*+]|\d+[.、)])\s+/.test(line) && items.length) {
+        items[items.length - 1].text += '\n' + line.trim();
+        return;
+      }
+      var para = line.trim();
+      if (/[：:]$/.test(para) && para.length <= 40) { lastLead = para; return; }
+      if (/^-{3,}$/.test(para)) return;
+      items.push({ text: para, lead: '', sub: sub });
+    });
+    flushTable();
+    return items;
+  }
+
+  function parseMarkdownSections(content) {
+    var sections = [];
+    splitSections(content).forEach(function (sec) {
+      if (sec.level === 1) return;                // H1 是标题，不算板块
+      var items = parseItems(sec.lines.join('\n'));
+      if (!sec.heading && !items.length) return;
+      sections.push({ heading: sec.heading || '（无标题板块）', items: items });
+    });
+    return sections;
+  }
+
+  function totalItems(sections) {
+    return sections.reduce(function (n, s) { return n + s.items.length; }, 0);
   }
 
   // === 预览解析 ===
@@ -146,19 +203,23 @@ const Admin = (function() {
       showToast('请先粘贴简报内容', 'error');
       return;
     }
-    var items = parseMarkdownItems(content);
+    var sections = parseMarkdownSections(content);
+    var count = totalItems(sections);
     var preview = document.getElementById('preview');
     var list = document.getElementById('previewList');
-    document.getElementById('itemCount').textContent = items.length;
+    document.getElementById('itemCount').textContent = count;
 
-    list.innerHTML = items.map(function(item, i) {
-      return '<div class="preview-item">' +
-        '<div class="pi-title">' + (i + 1) + '. ' + escapeHtml(item.title || '(无标题)') + '</div>' +
-        '<div class="pi-content">' + escapeHtml(item.content.substring(0, 200)) + (item.content.length > 200 ? '...' : '') + '</div>' +
+    list.innerHTML = sections.map(function (sec) {
+      return '<div class="preview-section">' +
+        '<div class="ps-head">' + escapeHtml(sec.heading) + '<span class="ps-count">' + sec.items.length + ' 条</span></div>' +
+        sec.items.map(function (item) {
+          var text = String(item.text || '').replace(/\n/g, ' ');
+          return '<div class="preview-item">' + escapeHtml(text.substring(0, 160)) + (text.length > 160 ? '...' : '') + '</div>';
+        }).join('') +
         '</div>';
     }).join('');
     preview.classList.add('visible');
-    showToast('已解析 ' + items.length + ' 条');
+    showToast('共 ' + sections.length + ' 个板块 / ' + count + ' 条');
   }
 
   // === 提交写入 ===
