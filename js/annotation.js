@@ -1,315 +1,333 @@
 /**
- * 阿鹏资讯站 - 划词标注模块 v2.0
- * 选中文字后弹出浮动菜单，支持收藏/重要/搜索
- * 桌面端 mouseup + 移动端 touchend 双兼容
- * 设计风格: today.ai 浅色温暖
+ * 划词标注 v3
+ *
+ * 设计要点（按阿鹏反馈）：
+ * - 菜单一律出现在选中文字「下方」，不跟浏览器自带的复制/搜索条抢正上方
+ * - 同一条文字 + 同一类型只能存一次，再点一次＝取消
+ * - 每条消息右下角有 ⭐收藏 / 🔥重点 / 🔍追踪 / 📋Obsidian 四个按钮（带文字）
+ * - 收藏·重点·追踪 存在本机（UserStore），不同访客互不影响
+ * - 📋Obsidian：电脑端直接跳转 Obsidian；手机端复制格式化文本到剪贴板
  */
+const Annotation = (function () {
+  var menu = null;
+  var currentSelection = '';
+  var currentBriefId = '';
+  var currentSection = '简报';
+  var currentDate = '';
+  var hideTimer = null;
 
-const Annotation = (function() {
-
-  let menu = null;
-  let currentSelection = '';
-  let currentBriefId = null;
-  let noteMode = false;
-
-  // 搜索引擎入口（百度/Google/B站）
-  const SEARCH_ENGINES = [
-    { name: '百度', url: 'https://www.baidu.com/s?wd=', icon: '🔍' },
-    { name: 'Google', url: 'https://www.google.com/search?q=', icon: '🌐' },
-    { name: 'B站', url: 'https://search.bilibili.com/all?keyword=', icon: '📺' }
-  ];
+  var OBS_FILE = '每日摘录';
 
   function init() {
     createMenu();
     bindEvents();
   }
 
+  function isMobile() {
+    return /Android|iPhone|iPad|iPod|Mobile|MicroMessenger|Quark|UCBrowser|MQQBrowser/i.test(navigator.userAgent)
+      || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  }
+
   function createMenu() {
     menu = document.createElement('div');
     menu.className = 'selection-menu';
+    menu.setAttribute('role', 'toolbar');
     menu.innerHTML =
-      '<button class="menu-item" data-action="star">' +
-      '  <span class="icon">⭐</span><span>收藏</span>' +
-      '</button>' +
-      '<button class="menu-item" data-action="important">' +
-      '  <span class="icon">🔥</span><span>重要</span>' +
-      '</button>' +
-      '<div class="menu-divider"></div>' +
-      '<button class="menu-item" data-action="search">' +
-      '  <span class="icon">🔎</span><span>深度搜索</span>' +
-      '</button>' +
-      '<div class="search-submenu" id="searchSubmenu">' +
-      SEARCH_ENGINES.map(function(e) {
-        return '<a class="menu-item search-link" data-url="' + e.url + '" data-engine="' + e.name + '">' +
-          '<span class="icon">' + e.icon + '</span><span>' + e.name + '</span></a>';
-      }).join('') +
-      '</div>';
+      '<button type="button" class="menu-item" data-action="star">⭐<span>收藏</span></button>' +
+      '<button type="button" class="menu-item" data-action="important">🔥<span>重点</span></button>' +
+      '<button type="button" class="menu-item" data-action="track">🔍<span>追踪</span></button>' +
+      '<button type="button" class="menu-item obsidian" data-action="obsidian">📋<span>Obsidian</span></button>';
     document.body.appendChild(menu);
     bindMenuEvents();
   }
 
   function bindEvents() {
-    document.addEventListener('mouseup', handleSelection);
-    document.addEventListener('touchend', handleSelection);
-    document.addEventListener('mousedown', function(e) {
-      if (menu && menu.classList.contains('visible')) {
-        if (!menu.contains(e.target)) {
-          hideMenu();
-        }
-      }
+    document.addEventListener('selectionchange', function () {
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(syncFromSelection, isMobile() ? 140 : 40);
     });
-    window.addEventListener('scroll', hideMenu, { passive: true });
-    window.addEventListener('resize', hideMenu);
+    document.addEventListener('mouseup', function (e) {
+      if (menu && menu.contains(e.target)) return;
+      setTimeout(syncFromSelection, 30);
+    });
+    document.addEventListener('touchend', function (e) {
+      if (menu && menu.contains(e.target)) return;
+      setTimeout(syncFromSelection, 90);
+    }, { passive: true });
+    document.addEventListener('mousedown', function (e) {
+      if (menu && !menu.contains(e.target)) hideMenu(false);
+    });
+    window.addEventListener('scroll', function () { hideMenu(false); }, { passive: true });
+    window.addEventListener('resize', function () { hideMenu(false); });
   }
 
-  function handleSelection(e) {
-    if (menu && menu.contains(e.target)) return;
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  function nodeEl(node) {
+    if (!node) return null;
+    return node.nodeType === 3 ? node.parentElement : node;
+  }
 
-    setTimeout(function() {
-      var sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0) {
-        hideMenu();
-        return;
+  /* 从最近的板块标题往上找板块名 */
+  function findSectionName(node) {
+    var el = nodeEl(node);
+    if (!el) return '简报';
+    var sec = el.closest ? el.closest('.section[data-section]') : null;
+    if (sec) {
+      var h = sec.querySelector('.section-head h2');
+      if (h) {
+        var def = (window.App && App.SECTIONS || []).filter(function (s) { return s.id === sec.getAttribute('data-section'); })[0];
+        return def ? def.name.replace(/^\S+\s*/, '') : h.textContent.replace(/^\S+\s*/, '').trim();
       }
-      var text = sel.toString().trim();
-      if (!text || text.length < 2) {
-        hideMenu();
-        return;
-      }
+    }
+    var heading = el.closest ? el.closest('.item-sub') : null;
+    if (heading) return heading.textContent.trim();
+    var item = el.closest ? el.closest('.news-item') : null;
+    if (item && item.getAttribute('data-section-name')) return item.getAttribute('data-section-name');
+    return '简报';
+  }
 
-      var range = sel.getRangeAt(0);
-      var rect = range.getBoundingClientRect();
-      if (rect.width === 0 && rect.height === 0) {
-        hideMenu();
-        return;
-      }
+  function isoDateFromPage() {
+    var el = document.getElementById('dateToday');
+    if (el && el.getAttribute('data-iso')) return el.getAttribute('data-iso');
+    var card = document.querySelector('[data-item-date]');
+    if (card && card.getAttribute('data-item-date')) return card.getAttribute('data-item-date');
+    var d = new Date();
+    var p = function (n) { return String(n).length < 2 ? '0' + n : String(n); };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
 
-      currentSelection = text;
-      var briefEl = range.startContainer.parentElement.closest('[data-brief-id]');
-      currentBriefId = briefEl ? briefEl.getAttribute('data-brief-id') : null;
+  function syncFromSelection() {
+    if (!menu) return;
+    var sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) { hideMenu(false); return; }
+    var text = sel.toString().replace(/\s+/g, ' ').trim();
+    if (!text || text.length < 2) { hideMenu(false); return; }
+    var range;
+    try { range = sel.getRangeAt(0); } catch (e) { hideMenu(false); return; }
+    var rect = range.getBoundingClientRect();
+    if (!rect || (rect.width === 0 && rect.height === 0)) { hideMenu(false); return; }
 
-      showMenu(rect);
-    }, 10);
+    currentSelection = text;
+    var el = nodeEl(range.startContainer);
+    var briefEl = el && el.closest ? el.closest('[data-brief-id]') : null;
+    currentBriefId = briefEl ? (briefEl.getAttribute('data-brief-id') || '') : '';
+    var itemEl = el && el.closest ? el.closest('[data-item-text]') : null;
+    currentDate = (itemEl && itemEl.getAttribute('data-item-date')) || isoDateFromPage();
+    currentSection = findSectionName(range.startContainer);
+
+    refreshToggleState();
+    showMenu(rect);
+  }
+
+  function refreshToggleState() {
+    if (!menu) return;
+    ['star', 'important', 'track'].forEach(function (type) {
+      var btn = menu.querySelector('[data-action="' + type + '"]');
+      if (!btn) return;
+      var on = window.UserStore && UserStore.isActive({
+        brief_id: currentBriefId,
+        selected_text: currentSelection,
+        annotation_type: type
+      });
+      btn.classList.toggle('is-on', !!on);
+    });
   }
 
   function showMenu(rect) {
-    var submenu = document.getElementById('searchSubmenu');
-    if (submenu) submenu.classList.remove('visible');
-    noteMode = false;
-
-    var menuWidth = 180;
-    var menuHeight = 160;
-    var left = rect.left + (rect.width / 2) - (menuWidth / 2);
-    var top = rect.top - menuHeight - 8;
-
-    if (top < 60) {
-      top = rect.bottom + 8;
-    }
+    var width = Math.min(isMobile() ? 300 : 320, window.innerWidth - 16);
+    var height = 48;
+    var left = rect.left + rect.width / 2 - width / 2;
+    var top = rect.bottom + 8;
+    var maxLeft = window.innerWidth - width - 8;
     if (left < 8) left = 8;
-    if (left + menuWidth > window.innerWidth - 8) {
-      left = window.innerWidth - menuWidth - 8;
-    }
-
+    if (left > maxLeft) left = maxLeft;
+    /* 不往选区上方挤（那是浏览器自带工具条的地盘），贴着屏幕底部即可 */
+    var maxTop = window.innerHeight - height - 8;
+    if (top > maxTop) top = maxTop;
+    menu.style.width = width + 'px';
     menu.style.left = left + 'px';
     menu.style.top = top + 'px';
     menu.classList.add('visible');
   }
 
-  function hideMenu() {
+  function hideMenu(clearSelection) {
     if (menu) menu.classList.remove('visible');
-    var submenu = document.getElementById('searchSubmenu');
-    if (submenu) submenu.classList.remove('visible');
-    noteMode = false;
-    try { window.getSelection().removeAllRanges(); } catch(e) {}
+    resetObsidianBtn(menu && menu.querySelector('[data-action="obsidian"]'));
+    if (clearSelection) {
+      try { window.getSelection().removeAllRanges(); } catch (e) {}
+    }
+  }
+
+  function resetObsidianBtn(btn) {
+    if (!btn) return;
+    btn.classList.remove('copied');
+    btn.innerHTML = '📋<span>Obsidian</span>';
   }
 
   function bindMenuEvents() {
-    var items = menu.querySelectorAll('.menu-item[data-action]');
-    items.forEach(function(btn) {
-      btn.addEventListener('click', function(e) {
-        e.preventDefault();
-        handleAction(btn.getAttribute('data-action'));
-      });
-    });
-
-    var searchLinks = menu.querySelectorAll('.search-link');
-    searchLinks.forEach(function(link) {
-      link.addEventListener('click', function(e) {
-        e.preventDefault();
-        var baseUrl = link.getAttribute('data-url');
-        var engine = link.getAttribute('data-engine');
-        var searchUrl = baseUrl + encodeURIComponent(currentSelection);
-        openSearchUrl(searchUrl, engine);
-      });
-    });
-  }
-
-  function handleAction(action) {
-    switch(action) {
-      case 'star':
-        saveAnnotation('star', null);
-        hideMenu();
-        break;
-      case 'important':
-        saveAnnotation('important', null);
-        hideMenu();
-        break;
-      case 'search':
-        var submenu = document.getElementById('searchSubmenu');
-        if (submenu) submenu.classList.toggle('visible');
-        break;
-    }
-  }
-
-  async function saveAnnotation(type, note) {
-    if (!currentSelection) return;
-    try {
-      await DB.insertAnnotation({
-        brief_id: currentBriefId,
-        selected_text: currentSelection,
-        annotation_type: type,
-        tags: [],
-        note: note || null
-      });
-      showToast(type === 'star' ? '⭐ 已收藏' : type === 'important' ? '🔥 已标记重要' : '✅ 已保存');
-    } catch (err) {
-      console.error('保存标注失败:', err);
-      showToast('❌ 保存失败，请检查网络');
-    }
-  }
-
-  function openSearchUrl(url, engineName) {
-    var isWeChat = /MicroMessenger/i.test(navigator.userAgent);
-    if (isWeChat) {
-      copyToClipboard(url);
-      showToast('📋 ' + engineName + '搜索链接已复制，请在浏览器中打开');
-    } else {
-      var win = window.open(url, '_blank');
-      if (!win) {
-        copyToClipboard(url);
-        showToast('📋 弹窗被拦截，链接已复制到剪贴板');
-      } else {
-        showToast('🔍 已打开' + engineName + '搜索');
-      }
-    }
-    hideMenu();
-  }
-
-  function copyToClipboard(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).catch(function() {
-        fallbackCopy(text);
-      });
-    } else {
-      fallbackCopy(text);
-    }
-  }
-
-  function fallbackCopy(text) {
-    var textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
-    document.body.appendChild(textarea);
-    textarea.select();
-    try { document.execCommand('copy'); } catch(e) {}
-    document.body.removeChild(textarea);
-  }
-
-  function showToast(msg) {
-    if (window.App && typeof window.App.toast === 'function') {
-      window.App.toast(msg);
-    } else {
-      var toast = document.getElementById('annoToast');
-      if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'annoToast';
-        toast.className = 'toast';
-        document.body.appendChild(toast);
-      }
-      toast.textContent = msg;
-      toast.classList.add('visible');
-      setTimeout(function() { toast.classList.remove('visible'); }, 2500);
-    }
-  }
-
-  function bindItemActions(card, itemTitle, briefId) {
-    var buttons = card.querySelectorAll('.item-actions button');
-    buttons.forEach(function(btn) {
-      btn.addEventListener('click', function(e) {
+    menu.addEventListener('mousedown', function (e) { e.preventDefault(); e.stopPropagation(); });
+    menu.addEventListener('touchstart', function (e) { e.stopPropagation(); }, { passive: true });
+    menu.querySelectorAll('.menu-item').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        var action = btn.getAttribute('data-action');
-        currentBriefId = briefId;
-
-        switch(action) {
-          case 'star':
-            currentSelection = itemTitle;
-            saveAnnotation('star', null);
-            btn.classList.toggle('active-star');
-            break;
-          case 'important':
-            currentSelection = itemTitle;
-            saveAnnotation('important', null);
-            btn.classList.toggle('active-fire');
-            break;
-          case 'search':
-            currentSelection = itemTitle;
-            showItemSearchMenu(btn, itemTitle);
-            break;
-        }
+        handleAction(btn.getAttribute('data-action'), btn);
       });
     });
   }
 
-  function showItemSearchMenu(btn, searchText) {
-    var old = document.getElementById('itemSearchMenu');
-    if (old) old.remove();
+  function handleAction(action, btn) {
+    if (action === 'obsidian') {
+      saveToObsidian(btn, currentSelection, currentSection, currentDate);
+      return;
+    }
+    toggleSave(action);
+    flashMenuButton(btn, action);
+  }
 
-    var popup = document.createElement('div');
-    popup.id = 'itemSearchMenu';
-    popup.className = 'selection-menu visible';
-    popup.style.minWidth = '140px';
-    popup.innerHTML = SEARCH_ENGINES.map(function(e) {
-      return '<a class="menu-item search-link" data-url="' + e.url + '" data-engine="' + e.name + '">' +
-             '<span class="icon">' + e.icon + '</span><span>' + e.name + '</span></a>';
-    }).join('');
+  function toggleSave(type, override) {
+    if (!window.UserStore) return null;
+    var text = (override && override.text) || currentSelection;
+    if (!text) return null;
+    var briefId = (override && override.briefId !== undefined) ? override.briefId : currentBriefId;
+    var section = (override && override.section) || currentSection;
+    var result = UserStore.toggleAnnotation({
+      brief_id: briefId,
+      selected_text: text,
+      annotation_type: type,
+      section: section
+    });
+    if (type === 'track' && result.active) UserStore.upsertTrack(section);
+    if (window.App && App.syncItemActionState) App.syncItemActionState();
+    if (window.App && App.refreshSidebarCounts) App.refreshSidebarCounts();
+    var labels = { star: '收藏', important: '重点', track: '追踪' };
+    toast(result.active ? '已' + labels[type] : '已取消' + labels[type]);
+    return result;
+  }
 
-    document.body.appendChild(popup);
+  function flashMenuButton(btn, type) {
+    refreshToggleState();
+    if (!btn) return;
+    btn.classList.add('flash');
+    setTimeout(function () { btn.classList.remove('flash'); }, 500);
+  }
 
-    var rect = btn.getBoundingClientRect();
-    popup.style.position = 'fixed';
-    popup.style.left = (rect.right - 140) + 'px';
-    popup.style.top = (rect.bottom + 4) + 'px';
+  /* ============ 条目右下角按钮 ============ */
+  function bindAllIn(root) {
+    if (!root) return;
+    root.querySelectorAll('.item-actions').forEach(function (row) {
+      var item = row.closest('[data-item-text]');
+      if (!item) return;
+      var text = item.getAttribute('data-item-text') || '';
+      var briefId = item.getAttribute('data-brief-id') || '';
+      var section = item.getAttribute('data-section-name') || '简报';
+      var date = item.getAttribute('data-item-date') || isoDateFromPage();
 
-    popup.querySelectorAll('.search-link').forEach(function(link) {
-      link.addEventListener('click', function(e) {
-        e.preventDefault();
-        var baseUrl = link.getAttribute('data-url');
-        var engine = link.getAttribute('data-engine');
-        var searchUrl = baseUrl + encodeURIComponent(searchText);
-        openSearchUrl(searchUrl, engine);
-        popup.remove();
+      row.querySelectorAll('button[data-action]').forEach(function (btn) {
+        if (btn.getAttribute('data-bound') === '1') return;
+        btn.setAttribute('data-bound', '1');
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var action = btn.getAttribute('data-action');
+          if (action === 'obsidian') {
+            saveToObsidian(btn, text, section, date);
+            return;
+          }
+          toggleSave(action, { text: text, briefId: briefId, section: section });
+        });
       });
     });
+  }
 
-    setTimeout(function() {
-      document.addEventListener('mousedown', function closeItemSearch(ev) {
-        if (!popup.contains(ev.target)) {
-          popup.remove();
-          document.removeEventListener('mousedown', closeItemSearch);
-        }
-      });
-    }, 100);
+  /* 兼容旧调用 */
+  function bindItemActions(card) { bindAllIn(card); }
+
+  /* ============ Obsidian ============ */
+  function buildPayload(text, section, date) {
+    var d = date || isoDateFromPage();
+    var sec = (section || '简报').replace(/[\s#\[\]]+/g, '');
+    var lines = String(text || '').split('\n').map(function (l) { return '> ' + l.trim(); }).join('\n');
+    return '#简报/' + sec + ' #日期/' + d + '\n' + lines + '\n来源：阿鹏资讯站 · ' + (section || '简报') + ' · ' + d;
+  }
+
+  async function copyText(text) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (e) {}
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.top = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  function flashCopied(btn) {
+    if (!btn) return;
+    btn.classList.add('copied');
+    btn.innerHTML = '✅<span>已复制</span>';
+    clearTimeout(btn._t);
+    btn._t = setTimeout(function () { resetObsidianBtn(btn); }, 1500);
+  }
+
+  async function saveToObsidian(btn, text, section, date) {
+    if (!text) return;
+    var payload = buildPayload(text, section, date);
+    var copied = await copyText(payload);
+    if (isMobile()) {
+      flashCopied(btn);
+      toast(copied ? '已复制，去 Obsidian 粘贴' : '复制失败，请长按选中文字手动复制');
+      return;
+    }
+    /* 电脑端：直接唤起 Obsidian 新建笔记 */
+    var uri = 'obsidian://new?file=' + encodeURIComponent(OBS_FILE) +
+      '&content=' + encodeURIComponent(payload);
+    try {
+      window.location.href = uri;
+    } catch (e) {}
+    flashCopied(btn);
+    toast(copied ? '已复制并打开 Obsidian' : '已尝试打开 Obsidian');
+  }
+
+  function copyToObsidian(text, section, date, btn) {
+    return saveToObsidian(btn, text, section, date);
+  }
+
+  function toast(msg) {
+    if (window.App && typeof App.toast === 'function') { App.toast(msg); return; }
+    var el = document.getElementById('annoToast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'annoToast';
+      el.className = 'toast';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.classList.add('visible');
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { el.classList.remove('visible'); }, 2400);
   }
 
   return {
     init: init,
+    bindAllIn: bindAllIn,
     bindItemActions: bindItemActions,
-    showToast: showToast,
-    openSearchUrl: openSearchUrl,
-    copyToClipboard: copyToClipboard
+    toggleSave: toggleSave,
+    copyToObsidian: copyToObsidian,
+    buildPayload: buildPayload,
+    isoDateFromPage: isoDateFromPage,
+    isMobile: isMobile,
+    toast: toast
   };
 })();
 
