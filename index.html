@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>阿鹏资讯站 - 每日策展简报</title>
+  <meta name="description" content="阿鹏资讯站是Peng老师的个人策展平台。系统由AI每日自动抓取金融、科技、AI工具、加密货币等领域的最新资讯，整理为早间、午间、晚间、夜间四个时段的简报推送到网站。用户可在简报中划词标注、收藏重要信息、标记关键内容、建立追踪线索，并支持百度、Google、B站、微信多引擎深度搜索。界面采用深色主题、卡片式布局、Markdown渲染、新闻条目卡片展示，完整适配移动端和微信内置浏览器。">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
+  <link rel="stylesheet" href="styles/main.css">
+  <script>
+    // 管理入口: ?admin=1 跳转到管理页面
+    if (new URLSearchParams(location.search).get('admin') === '1') {
+      location.replace('./admin/');
+    }
+  </script>
+</head>
+<body>
+
+  <!-- 顶部导航栏 -->
+  <header class="topbar">
+    <button class="menu-btn" id="menuBtn" aria-label="菜单">☰</button>
+    <div class="logo" title="阿鹏资讯">阿鹏资讯</div>
+    <div class="date-today" id="dateToday"></div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="搜索简报内容..." autocomplete="off">
+    </div>
+  </header>
+
+  <!-- 主布局 -->
+  <div class="layout">
+
+    <!-- 左侧边栏 -->
+    <aside class="sidebar" id="sidebar">
+      <div class="nav-group">
+        <h4>简报</h4>
+        <div class="nav-item active" data-view="today">
+          <span class="icon">📰</span> 今日简报
+        </div>
+      </div>
+      <div class="nav-group">
+        <h4>我的</h4>
+        <div class="nav-item" data-view="archive">
+          <span class="icon">📂</span> 历史归档
+        </div>
+        <div class="nav-item" data-view="collections">
+          <span class="icon">⭐</span> 我的收藏 <span class="count"></span>
+        </div>
+        <div class="nav-item" data-view="tracks">
+          <span class="icon">🔍</span> 追踪线索
+        </div>
+      </div>
+    </aside>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- 主内容区 -->
+    <main class="main">
+      <div class="main-header">
+        <h1 id="mainTitle">今日简报</h1>
+        <div class="period-tabs" id="periodTabs" style="display:none">
+          <button class="period-tab active" data-period="all">全部</button>
+          <button class="period-tab" data-period="早间">早间</button>
+          <button class="period-tab" data-period="午间">午间</button>
+          <button class="period-tab" data-period="晚间">晚间</button>
+          <button class="period-tab" data-period="夜间">夜间</button>
+          <button class="period-tab" data-period="专题">专题</button>
+        </div>
+      </div>
+      <div id="mainContent">
+        <div class="loading"><div class="spinner"></div><div>加载中...</div></div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- 移动端底部导航 -->
+  <nav class="mobile-nav">
+    <button class="nav-btn active" data-view="today">
+      <span class="icon">📰</span> 今日
+    </button>
+    <button class="nav-btn" data-view="archive">
+      <span class="icon">📂</span> 归档
+    </button>
+    <button class="nav-btn" data-view="collections">
+      <span class="icon">⭐</span> 收藏
+    </button>
+    <button class="nav-btn" data-view="tracks">
+      <span class="icon">🔍</span> 追踪
+    </button>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/annotation.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
