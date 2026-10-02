@@ -36,8 +36,11 @@ const App = (function () {
   const SECTIONS = [
     { id: 'apeng_hot', name: '🔥 阿鹏热榜', icon: '🔥', priority: 10, re: /阿鹏热榜|热榜|热搜|在聊什么/ },
     { id: 'signal', name: '⚡ 深度信号 · 信息差', icon: '⚡', priority: 9, re: /深度信号|深度|信息差/ },
-    { id: 'mood', name: '🧠 社会情绪', icon: '🧠', priority: 8, re: /社会情绪|情绪与叙事|焦虑|社会叙事/ },
-    { id: 'mind', name: '🧠 心理与行为', icon: '🧠', priority: 6, re: /心理与行为|行为研究|心理学|注意力窗口|上瘾机制/ },
+    { id: 'macro', name: '📊 宏观情绪仪表盘', icon: '📊', priority: 9, re: /宏观情绪|情绪仪表盘|仪表盘/ },
+    /* v10：心理与行为（mind）已并入社会情绪，故 mood 正则吸收心理/行为类关键词 */
+    { id: 'mood', name: '🧠 社会情绪', icon: '🧠', priority: 8, re: /社会情绪|情绪与叙事|焦虑|社会叙事|心理与行为|行为研究|心理学|注意力窗口|上瘾机制/ },
+    { id: 'calendar', name: '📅 本周关键日历', icon: '📅', priority: 8, re: /本周关键日历|关键日历|财经日历/ },
+    { id: 'fringe', name: '🔭 边缘观察', icon: '🔭', priority: 7, re: /边缘观察|异端观点|边缘观点/ },
     { id: 'creator', name: '🎥 创作者经济', icon: '🎥', priority: 7, re: /创作者经济|平台动态|创作者|自媒体/ },
     { id: 'crossborder', name: '🛒 跨境电商/出海', icon: '🛒', priority: 7, re: /跨境电商|出海|跨境贸易|海外市场|跨境直播/ },
     { id: 'fx', name: '💱 汇率与跨境资金', icon: '💱', priority: 7, re: /汇率|跨境资金|离岸|在岸/ },
@@ -47,15 +50,16 @@ const App = (function () {
     { id: 'ai', name: '🚀 AI大事件', icon: '🚀', priority: 7, re: /AI大事件|大事件|人工智能|大模型|AI发现|该知道|模型/ },
     { id: 'tech', name: '🚀 科技', icon: '🚀', priority: 6, re: /科技|技术|开发者|芯片|半导体|开源/ },
     { id: 'startup', name: '🚀 初创/融资', icon: '🚀', priority: 6, re: /初创|融资/ },
-    { id: 'estate', name: '🏠 房地产', icon: '🏠', priority: 6, re: /房地产|地产|房产|楼市|房价/ },
+    { id: 'estate', name: '🏠 房地产 · 国内楼市', icon: '🏠', priority: 6, re: /房地产|地产|房产|楼市|房价/ },
     { id: 'sports', name: '⚽ 体育/电竞', icon: '⚽', priority: 6, re: /体育|电竞|赛事/ },
     { id: 'ent', name: '🎬 娱乐', icon: '🎬', priority: 5, re: /娱乐|影视|综艺|明星|游戏|演唱会|电影|票房|音乐/ },
     { id: 'world', name: '🌍 国际/政治/社会', icon: '🌍', priority: 5, re: /国际|政治|社会|地缘|外交|冲突/ },
     { id: 'policy', name: '📋 政策与监管', icon: '📋', priority: 6, re: /政策|监管|合规|法规|条例/ },
-    { id: 'books', name: '📚 书籍/知识', icon: '📚', priority: 4, re: /书籍|知识|书单|阅读|新书/ },
-    { id: 'brief', name: '📌 今日速览', icon: '📌', priority: 8, re: /一句话|速览|总结|视角|导读|综述|概览/ },
+    { id: 'books', name: '📚 资源/知识推荐', icon: '📚', priority: 4, re: /资源|知识推荐|书籍|知识|书单|阅读|新书|播客/ },
+    /* v10：📌 今日速览（brief）已删除 —— 简报开头的「今日背景一句话」已覆盖它的作用 */
     { id: 'action', name: '💎 行动建议', icon: '💎', priority: 3, re: /行动|建议|预告|明日|待办|要做/ },
     { id: 'gap', name: '⚠️ 数据缺口', icon: '⚠️', priority: 2, re: /数据缺口|缺口|说明|备注/ },
+    /* 兜底桶：仅供 sectionMap 回退取值，渲染循环里被显式跳过（v10：不再渲染「其他」垃圾板块） */
     { id: 'other', name: '🧩 其他', icon: '🧩', priority: 1, re: null }
   ];
 
@@ -299,7 +303,7 @@ const App = (function () {
 
   function classify(heading) {
     const h = String(heading || '').replace(/^[#\s]+/, '');
-    if (!h) return sectionMap.brief ? 'brief' : 'other';
+    if (!h) return 'other';
     for (let i = 0; i < SECTIONS.length; i++) {
       const s = SECTIONS[i];
       if (s.re && s.re.test(h)) return s.id;
@@ -638,6 +642,7 @@ const App = (function () {
   function renderAllSections(groups) {
     let html = '';
     SECTIONS.forEach(function (def) {
+      if (def.id === 'other') return;   /* v10：兜底桶不渲染 */
       const g = groups[def.id];
       if (!g || !g.items.length) return;
 
@@ -1155,7 +1160,7 @@ const App = (function () {
     const groups = buildSectionGroups([brief]);
     let html = '';
     SECTIONS.forEach(function (def) {
-      if (def.id === 'apeng_hot') return;
+      if (def.id === 'apeng_hot' || def.id === 'other') return;
       const g = groups[def.id];
       if (!g || !g.items.length) return;
       let inner = '';
