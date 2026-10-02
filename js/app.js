@@ -343,15 +343,21 @@ const App = (function () {
       items.push(item);
     }
 
-    /* 一条消息的开头：**信号1** … / 今日一句话：… / **动态** … */
+    /* 一条消息的开头（标题类）：**标题** … / **信号1** … / 今日一句话：… */
+    /* 字段类标签（正文/我的观点/判断/来源…）不算新消息开头 */
     function isStoryStart(l) {
-      if (/^\*\*[^*]{1,14}\*\*/.test(l)) return true;
-      if (/^(今日一句话|信号|动态|事件|工具|书名|知识|观点|预告)[：:]/.test(l)) return true;
+      const bm = /^\*\*([^*]{1,14})\*\*\s*[：:]?/.exec(l);
+      if (bm) {
+        const label = bm[1].trim();
+        if (/^(来源|出处|判断|点评|解读|分析|正文|内容|详情|我的观点|我的判断|其他观点|别人的观点|他人观点|媒体观点)$/.test(label)) return false;
+        return true;
+      }
+      if (/^(今日一句话|信号|动态|事件|工具|书名|知识|观点|预告|标题)[：:]/.test(l)) return true;
       return false;
     }
-    /* 消息的后续行：来源 / 判断（紧跟在开头行后） */
+    /* 消息的字段行：来源 / 判断 / 正文 / 我的观点 / 其他观点（并入本条） */
     function isStoryField(l) {
-      return /^\s*(来源|出处|判断|点评|解读|分析)[：:]/.test(l);
+      return /^\s*\*{0,2}(来源|出处|判断|点评|解读|分析|正文|内容|详情|我的观点|我的判断|其他观点|别人的观点|他人观点|媒体观点)\*{0,2}\s*[：:]/.test(l);
     }
 
     lines.forEach(function (raw) {
@@ -369,10 +375,6 @@ const App = (function () {
         storyBuf.lines.push(line.replace(/^\s*>\s?/, ''));
         return;
       }
-      if (!line.trim()) {
-        flushPending();
-        return;
-      }
       /* markdown 表格：连续 | 行 */
       if (/^\s*\|.*\|\s*$/.test(line)) {
         flushStory();
@@ -382,9 +384,9 @@ const App = (function () {
       }
 
       const t = line.trim();
-      /* 已开消息后的 来源/判断 行：并入本条（必须先于 flushPending） */
-      if (storyBuf && isStoryField(t)) {
-        storyBuf.lines.push(t);
+      /* --- 分隔线：收掉当前消息 */
+      if (/^(-{3,}|={3,})$/.test(t)) {
+        flushPending();
         return;
       }
       /* 新消息开头：先收掉上一条/表格，再开新缓冲 */
@@ -393,7 +395,16 @@ const App = (function () {
         storyBuf = { lines: [t] };
         return;
       }
-      flushPending();
+      /* 当前消息已打开：贪婪收集所有非空行（正文/我的观点/其他观点/判断/列表） */
+      if (storyBuf) {
+        if (t) storyBuf.lines.push(t);
+        return;
+      }
+      /* 空行（无打开消息） */
+      if (!t) {
+        flushPending();
+        return;
+      }
 
       /* 顶级列表项（- / 1. / •） */
       const li = /^\s*(?:[-*+]|\d+[.、)]|•)\s+(.*)$/.exec(line);
@@ -417,41 +428,45 @@ const App = (function () {
     return items;
   }
 
-  /* 一条消息（信号/来源/判断…）拆成结构化字段 */
+  /* 一条消息（标题/正文/我的观点/其他观点/判断/来源…）拆成结构化字段 */
   function buildStory(rawLines, sub, lastLead) {
-    const f = { title: '', source: '', judgment: '', body: [] };
+    const f = { title: '', source: '', judgment: '', opinion: '', others: [], body: [] };
+    let cur = 'body';   // 当前收集目标：body / others（其他观点的列表项）
     rawLines.forEach(function (l) {
       l = String(l).trim();
       if (!l) return;
-      /* **标签** 内容（可无冒号） */
+      if (/^(-{3,}|={3,})$/.test(l)) return;
+
+      /* 「其他观点」块里的列表行（- / • / 数字.）→ others */
+      if (cur === 'others') {
+        const li = /^\s*(?:[-*•+]|\d+[.、)])\s+(.*)$/.exec(l);
+        if (li) { f.others.push(li[1].trim()); return; }
+        cur = 'body';   // 列表结束
+      }
+
+      /* **标签** 内容（可无冒号） / 标签：内容 */
       const bm = /^\*\*([^*]{1,14})\*\*\s*[：:]?\s*(.*)$/.exec(l);
-      if (bm) {
-        const label = bm[1].trim(), rest = (bm[2] || '').trim();
-        if (/来源|出处/.test(label)) { if (rest) f.source = rest; }
-        else if (/判断|点评|解读|分析/.test(label)) { if (rest) f.judgment = rest; }
-        else if (/信号|动态|事件|工具|书名|知识|一句话|观点|预告/.test(label)) {
-          f.title = f.title ? (f.title + ' ' + rest) : rest;
-        } else { f.body.push(rest || l); }
-        return;
-      }
-      /* 标签：内容 */
       const pm = /^([^*：:]{1,14})[：:]\s*(.*)$/.exec(l);
-      if (pm) {
-        const label = pm[1].trim(), val = (pm[2] || '').trim();
-        if (/来源|出处/.test(label)) { if (val) f.source = val; }
-        else if (/判断|点评|解读|分析/.test(label)) { if (val) f.judgment = val; }
-        else if (/信号|动态|事件|工具|书名|知识|一句话|观点|预告/.test(label)) {
-          f.title = f.title ? (f.title + ' ' + val) : val;
-        } else { f.body.push(l); }
-        return;
-      }
-      f.body.push(l);
+      let label = '', rest = '';
+      if (bm) { label = bm[1].trim(); rest = (bm[2] || '').trim(); }
+      else if (pm) { label = pm[1].trim(); rest = (pm[2] || '').trim(); }
+      else { f.body.push(l); return; }
+
+      if (/来源|出处/.test(label)) { if (rest) f.source = rest; cur = 'body'; }
+      else if (/我的观点|我的判断/.test(label)) { if (rest) f.opinion = rest; cur = 'body'; }
+      else if (/其他观点|别人的观点|他人观点|媒体观点/.test(label)) { if (rest) f.others.push(rest); cur = 'others'; }
+      else if (/判断|点评|解读|分析/.test(label)) { if (rest) f.judgment = rest; cur = 'body'; }
+      else if (/信号|动态|事件|工具|书名|知识|一句话|观点|预告|标题/.test(label)) {
+        f.title = f.title ? (f.title + ' ' + rest) : rest; cur = 'body';
+      } else if (/正文|内容|详情/.test(label)) { if (rest) f.body.push(rest); cur = 'body'; }
+      else { f.body.push(rest || l); cur = 'body'; }
     });
     const body = f.body.join('\n').trim();
-    const text = [f.title, body, f.judgment, f.source ? ('来源：' + f.source) : ''].filter(Boolean).join('\n').trim();
+    const text = [f.title, body, f.opinion, f.others.join('；'), f.judgment, f.source ? ('来源：' + f.source) : ''].filter(Boolean).join('\n').trim();
     if (!text && !f.source) return null;
     return {
       text: text, title: f.title, body: body,
+      opinion: f.opinion, others: f.others,
       source: f.source, judgment: f.judgment,
       lead: lastLead, sub: sub, grouped: true
     };
@@ -539,6 +554,8 @@ const App = (function () {
             sub: item.sub || '',
             title: item.title || '',
             body: item.body || '',
+            opinion: item.opinion || '',
+            others: item.others || [],
             judgment: item.judgment || '',
             source: item.source || '',
             grouped: !!item.grouped,
@@ -706,7 +723,13 @@ const App = (function () {
     html += '<div class="item-body">';
     if (meta.length) html += '<div class="item-meta">' + meta.join('') + '</div>';
     if (title) html += '<div class="item-title">' + renderInline(title) + '</div>';
-    if (content) html += '<div class="item-content">' + renderMarkdown(content) + '</div>';
+    if (content) html += '<div class="item-content">' + renderMarkdown(content, { noBarChart: /^(market|fx|crossborder)$/.test(item.sectionId) }) + '</div>';
+    if (item.opinion) html += '<div class="item-opinion"><span class="op-tag">我的观点</span><div class="op-text">' + renderMarkdown(item.opinion) + '</div></div>';
+    if (item.others && item.others.length) {
+      html += '<div class="item-others"><span class="op-tag others-tag">其他观点</span><ul class="op-list">';
+      item.others.forEach(function (o) { html += '<li>' + renderInline(o) + '</li>'; });
+      html += '</ul></div>';
+    }
     if (item.judgment) html += '<div class="item-judgment"><span class="j-tag">判断</span><div class="j-text">' + renderMarkdown(item.judgment) + '</div></div>';
     html += '</div>';
 
@@ -748,7 +771,7 @@ const App = (function () {
   /* ============================================
      Markdown + 高亮 + 表格 + 图表
      ============================================ */
-  function renderMarkdown(text) {
+  function renderMarkdown(text, opts) {
     const src = String(text == null ? '' : text);
     let html;
     if (typeof marked !== 'undefined' && marked.parse) {
@@ -759,7 +782,7 @@ const App = (function () {
     }
     html = sanitizeHtml(html);
     html = upgradeTables(html);
-    html = applyCharts(html);
+    html = applyCharts(html, opts);
     return decorateHtml(html);
   }
 
@@ -803,7 +826,7 @@ const App = (function () {
   }
 
   /* 数值型表格 → 自动补一张条形图 */
-  function applyCharts(html) {
+  function applyCharts(html, opts) {
     if (html.indexOf('<table') === -1) return html;
     const wrap = document.createElement('div');
     wrap.innerHTML = html;
@@ -820,6 +843,15 @@ const App = (function () {
           if (/^跌/.test(t)) td.innerHTML = '↓ ' + escapeHtml(t);
         }
       });
+      /* 近5天趋势表 → 折线图 */
+      const lineChart = buildLineChart(table);
+      if (lineChart) {
+        table.parentNode.insertBefore(lineChart, table);
+        table.style.display = 'none';
+        return;
+      }
+      /* 行情板块（market/fx/crossborder）：保留表格 + 横滑，不转条形图 */
+      if (opts && opts.noBarChart) return;
       const chart = buildChartFromTable(table);
       if (chart) {
         table.parentNode.insertBefore(chart, table);
@@ -830,6 +862,102 @@ const App = (function () {
   }
 
   const ORDINAL = { '极高': 5, '很高': 4.7, '高': 4, '较高': 3.6, '偏高': 3.4, '中高': 3.2, '中': 3, '一般': 2.6, '偏低': 2.2, '较低': 2, '低': 1.4, '很低': 1, '极低': 0.6 };
+
+  /* 近5天趋势表（首列日期 MM-DD + 多列数值）→ SVG 折线图，点上方标数字 */
+  function buildLineChart(table) {
+    const headerCells = Array.prototype.slice.call(table.querySelectorAll('thead th'));
+    const rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+    if (rows.length < 2 || rows.length > 12) return null;
+    if (!headerCells.length) return null;
+
+    const grid = rows.map(function (tr) {
+      return Array.prototype.slice.call(tr.querySelectorAll('td')).map(function (td) { return td.textContent.trim(); });
+    }).filter(function (r) { return r.length >= 2; });
+    if (grid.length < 2) return null;
+
+    /* 首列必须是日期（表头含「日期」，或首列全是 MM-DD / YYYY-MM-DD / N月N日） */
+    const head0 = headerCells[0] ? (headerCells[0].textContent ? headerCells[0].textContent.trim() : headerCells[0].trim()) : '';
+    const isDateHead = /日期|date|时间/i.test(head0);
+    const allDateCells = grid.every(function (r) {
+      return /^\d{1,2}[-/]\d{1,2}([-/]\d{2,4})?$/.test(r[0]) || /^\d{1,2}月\d{1,2}日?$/.test(r[0]);
+    });
+    if (!isDateHead && !allDateCells) return null;
+
+    /* 系列 = 第 2..n 列，要求全部可解析为数值 */
+    const series = [];
+    for (let c = 1; c < headerCells.length; c++) {
+      const h = headerCells[c] ? (headerCells[c].textContent ? headerCells[c].textContent.trim() : headerCells[c].trim()) : ('列' + c);
+      const values = [], raws = [];
+      let ok = true;
+      grid.forEach(function (r) {
+        const n = parseNumericCell(r[c] || '');
+        if (n === null) { ok = false; return; }
+        values.push(n.value);
+        raws.push(r[c]);
+      });
+      if (!ok || values.length < 2) return null;
+      series.push({ name: h, values: values, raws: raws });
+    }
+    if (!series.length) return null;
+
+    const labels = grid.map(function (r) { return r[0]; });
+    const W = 640, H = 210, padL = 46, padR = 18, padT = 38, padB = 32;
+    const allVals = series.reduce(function (a, s) { return a.concat(s.values); }, []);
+    let mn = Math.min.apply(null, allVals), mx = Math.max.apply(null, allVals);
+    if (mx === mn) { mx = mn + 1; mn = mn - 1; }
+    const pad = (mx - mn) * 0.14 || 1;
+    mn -= pad; mx += pad;
+
+    const n = labels.length;
+    const x = function (i) { return padL + (W - padL - padR) * (n === 1 ? 0.5 : i / (n - 1)); };
+    const y = function (v) { return padT + (H - padT - padB) * (1 - (v - mn) / (mx - mn)); };
+    const palette = ['#E2551F', '#2563EB', '#059669', '#7C5CD6', '#D97706', '#DB2777'];
+
+    let yGrid = '';
+    for (let g = 0; g <= 4; g++) {
+      const gy = padT + (H - padT - padB) * g / 4;
+      const gv = mx - (mx - mn) * g / 4;
+      yGrid += '<line x1="' + padL + '" y1="' + gy.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + gy.toFixed(1) + '" stroke="#EEF2F7" stroke-width="1"/>';
+      yGrid += '<text x="' + (padL - 6) + '" y="' + (gy + 4).toFixed(1) + '" text-anchor="end" class="lc-yl">' + fmtAxis(gv) + '</text>';
+    }
+
+    let paths = '', dots = '';
+    series.forEach(function (s, si) {
+      const color = palette[si % palette.length];
+      let d = '';
+      s.values.forEach(function (v, i) {
+        const px = x(i), py = y(v);
+        d += (i === 0 ? 'M' : 'L') + px.toFixed(1) + ' ' + py.toFixed(1);
+        dots += '<circle cx="' + px.toFixed(1) + '" cy="' + py.toFixed(1) + '" r="3.2" fill="' + color + '"/>';
+        dots += '<text x="' + px.toFixed(1) + '" y="' + (py - 8).toFixed(1) + '" text-anchor="middle" class="lc-dot">' + escapeHtml(s.raws[i]) + '</text>';
+      });
+      paths += '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+    });
+
+    let xLabels = '';
+    labels.forEach(function (lb, i) {
+      xLabels += '<text x="' + x(i).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" class="lc-xl">' + escapeHtml(lb) + '</text>';
+    });
+
+    let legend = '';
+    series.forEach(function (s, si) {
+      legend += '<span class="lc-lg"><i style="background:' + palette[si % palette.length] + '"></i>' + escapeHtml(s.name) + '</span>';
+    });
+
+    const svg = '<svg class="line-chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet">' + yGrid + paths + dots + xLabels + '</svg>';
+    const html = '<div class="chart chart-line"><div class="chart-head">' + escapeHtml(head0 || '近5天趋势') + '<span class="chart-hint">近5天趋势</span></div>' +
+      '<div class="chart-legend">' + legend + '</div>' + svg + '</div>';
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.firstChild;
+  }
+
+  function fmtAxis(v) {
+    if (Math.abs(v) >= 10000) return (v / 10000).toFixed(1) + '万';
+    if (Math.abs(v) >= 1000) return Math.round(v).toString();
+    if (Math.abs(v) >= 100) return v.toFixed(1);
+    return v.toFixed(2);
+  }
 
   function buildChartFromTable(table) {
     const rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));

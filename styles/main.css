@@ -669,6 +669,41 @@ html.is-uc .loading .spinner { animation-duration: 1s; }
 }
 .item-judgment .j-text { flex: 1; color: #4A4258; }
 
+/* 我的观点块：淡蓝 callout，和正文/判断区分开 */
+.item-opinion {
+  margin-top: 8px; padding: 8px 10px;
+  background: #EDF4FC; border-left: 3px solid #6FA8DC;
+  border-radius: 6px; font-size: 13.5px; line-height: 1.6;
+  display: flex; gap: 8px; align-items: flex-start;
+}
+.item-opinion .op-tag {
+  flex: 0 0 auto; font-size: 11px; color: #fff; background: #6FA8DC;
+  padding: 1px 7px; border-radius: 8px; margin-top: 2px;
+}
+.item-opinion .op-text { flex: 1; color: #33506E; }
+
+/* 其他观点块：淡灰 callout + 列表 */
+.item-others {
+  margin-top: 8px; padding: 8px 10px;
+  background: #F5F7F9; border-left: 3px solid #B6C0CC;
+  border-radius: 6px; font-size: 13px; line-height: 1.7;
+}
+.item-others .op-tag {
+  display: inline-block; font-size: 11px; color: #fff; background: #B6C0CC;
+  padding: 1px 7px; border-radius: 8px; margin-bottom: 5px;
+}
+.item-others .op-list { padding-left: 18px; margin: 0; }
+.item-others .op-list li { margin-bottom: 3px; color: #4A5568; }
+
+/* 折线图（近5天趋势） */
+.chart-line .line-chart { width: 100%; height: auto; display: block; }
+.chart-line .chart-legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 6px 0 2px; }
+.chart-line .lc-lg { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #4A5568; }
+.chart-line .lc-lg i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.line-chart .lc-yl { font-size: 9.5px; fill: #9CA3AF; }
+.line-chart .lc-xl { font-size: 10.5px; fill: #6B7280; }
+.line-chart .lc-dot { font-size: 9.5px; font-weight: 600; }
+
 /* 板块末尾的来源汇总 */
 .section-sources {
   margin-top: 10px; padding-top: 8px; border-top: 1px dashed #E5E7EB;
@@ -764,10 +799,13 @@ html.is-uc .loading .spinner { animation-duration: 1s; }
   white-space: normal !important; word-break: break-word;
 }
 
-/* 社会情绪/国际板块：表格太宽，允许横滑 */
+/* 社会情绪/国际/行情板块：表格太宽，允许横滑 */
 .section[data-section=mind] .item-content table,
 .section[data-section=world] .item-content table,
-.section[data-section=policy] .item-content table {
+.section[data-section=policy] .item-content table,
+.section[data-section=market] .item-content table,
+.section[data-section=fx] .item-content table,
+.section[data-section=crossborder] .item-content table {
   display: block !important; overflow-x: auto !important;
 }
 .section[data-section=mind] .item-content th,
@@ -775,7 +813,13 @@ html.is-uc .loading .spinner { animation-duration: 1s; }
 .section[data-section=world] .item-content th,
 .section[data-section=world] .item-content td,
 .section[data-section=policy] .item-content th,
-.section[data-section=policy] .item-content td {
+.section[data-section=policy] .item-content td,
+.section[data-section=market] .item-content th,
+.section[data-section=market] .item-content td,
+.section[data-section=fx] .item-content th,
+.section[data-section=fx] .item-content td,
+.section[data-section=crossborder] .item-content th,
+.section[data-section=crossborder] .item-content td {
   white-space: nowrap !important;
 }
 
