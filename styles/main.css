@@ -880,3 +880,25 @@ html.is-uc .loading .spinner { animation-duration: 1s; }
   .item-content table tbody { display: table-row-group !important; }
   .item-content table tr { display: table-row !important; }
 }
+/* === v3.7 手机端表格最终修复：关掉伪标签，长内容列允许换行 === */
+@media (max-width: 640px) {
+  .item-content table {
+    display: block !important; overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--line-soft) !important; border-radius: 10px;
+  }
+  .item-content table thead { display: table-header-group !important; }
+  .item-content table tbody { display: table-row-group !important; }
+  .item-content table tr { display: table-row !important; border: none !important; padding: 0 !important; }
+  .item-content table th,
+  .item-content table td {
+    display: table-cell !important; width: auto !important;
+    border: 1px solid var(--line-soft) !important;
+    padding: 8px 10px !important; white-space: normal !important;
+    word-break: break-word; line-height: 1.5;
+  }
+  /* 关掉那个堆叠模式的伪标签 */
+  .item-content table td::before { content: none !important; display: none !important; }
+  /* 第一列和短数字列不换行，长文本列给最大宽度 */
+  .item-content table td:first-child { white-space: nowrap !important; font-weight: 600; }
+}
