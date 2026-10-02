@@ -603,3 +603,95 @@ html.is-uc .loading .spinner { animation-duration: 1s; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
+/* ============================================================
+   v3.1 修复：板块细边框 / 判断块 / 来源页脚 / 环形图 / 按钮缩排
+   ============================================================ */
+
+/* 各大板块大框：莫兰迪浅色 1px 细边框，底色不变 */
+.section { border: 1px solid #E5E7EB; border-radius: 14px; }
+.section[data-section=hot]     { border-color: #E7C6B8; }
+.section[data-section=signal]  { border-color: #CDBFD9; }
+.section[data-section=brief]   { border-color: #C8D2DE; }
+.section[data-section=market]  { border-color: #BCC9DE; }
+.section[data-section=tech]    { border-color: #B9D2C8; }
+.section[data-section=estate]  { border-color: #D8C5B1; }
+.section[data-section=sports]   { border-color: #C5D5BB; }
+.section[data-section=ent]     { border-color: #E5C5CF; }
+.section[data-section=creator] { border-color: #E7D4BA; }
+.section[data-section=mind]    { border-color: #CEC5DF; }
+.section[data-section=world]   { border-color: #BCCCD3; }
+.section[data-section=books]   { border-color: #E1D7BB; }
+.section[data-section=policy]   { border-color: #BBC5D1; }
+.section[data-section=action]  { border-color: #E5C1B1; }
+.section[data-section=gap]     { border-color: #D4D4D4; }
+.section[data-section=other]   { border-color: #DBDBDB; }
+
+/* 判断块：淡紫 callout，和正文区分开 */
+.item-judgment {
+  margin-top: 8px; padding: 8px 10px;
+  background: #F1EDF7; border-left: 3px solid #9B8CC0;
+  border-radius: 6px; font-size: 13.5px; line-height: 1.6;
+  display: flex; gap: 8px; align-items: flex-start;
+}
+.item-judgment .j-tag {
+  flex: 0 0 auto; font-size: 11px; color: #fff; background: #9B8CC0;
+  padding: 1px 7px; border-radius: 8px; margin-top: 2px;
+}
+.item-judgment .j-text { flex: 1; color: #4A4258; }
+
+/* 板块末尾的来源汇总 */
+.section-sources {
+  margin-top: 10px; padding-top: 8px; border-top: 1px dashed #E5E7EB;
+  font-size: 12px; color: #9CA3AF; line-height: 1.7;
+}
+
+/* 环形图（占比饼） */
+.chart-donut-wrap .donut-row {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.chart-donut-wrap .donut {
+  width: 130px; height: 130px; border-radius: 50%; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+}
+.chart-donut-wrap .donut-hole {
+  width: 74px; height: 74px; border-radius: 50%; background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: #6B7280;
+}
+.chart-donut-wrap .donut-legend { flex: 1; min-width: 160px; }
+.chart-donut-wrap .lg-row {
+  display: flex; align-items: center; gap: 6px; font-size: 12.5px;
+  padding: 2px 0; color: #4B5563;
+}
+.chart-donut-wrap .lg-row i {
+  width: 10px; height: 10px; border-radius: 2px; flex: 0 0 auto;
+}
+.chart-donut-wrap .lg-row .lg-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chart-donut-wrap .lg-row b { color: #1F2937; font-weight: 600; }
+
+/* 操作按钮：缩小、单行不换行 */
+.news-item .item-actions {
+  display: flex; flex-wrap: nowrap; gap: 4px;
+  margin-top: 8px; padding-top: 6px; border-top: 1px dashed #F0F0F0;
+}
+.news-item .item-actions button {
+  display: inline-flex; align-items: center; gap: 3px;
+  height: 26px; padding: 0 8px; font-size: 12px; line-height: 1;
+  border: 1px solid #E5E7EB; background: #FAFAFA; border-radius: 6px;
+  color: #6B7280; white-space: nowrap; flex: 0 0 auto;
+}
+.news-item .item-actions button span { font-size: 12px; }
+.news-item .item-actions button:hover { background: #F3F4F6; color: #1F2937; }
+
+/* 手机端：图表纵向堆叠，按钮不换行 */
+@media (max-width: 640px) {
+  .chart .chart-row {
+    display: flex; flex-direction: column; align-items: stretch;
+    gap: 2px; margin-bottom: 8px;
+  }
+  .chart .chart-label { width: auto !important; }
+  .chart-donut-wrap .donut-row { flex-direction: column; align-items: center; }
+  .chart-donut-wrap .donut-legend { width: 100%; }
+  .news-item .item-actions { flex-wrap: nowrap; overflow-x: auto; }
+  .news-item .item-actions button { flex: 0 0 auto; }
+}

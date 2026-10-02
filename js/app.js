@@ -300,26 +300,44 @@ const App = (function () {
     const lines = String(body || '').replace(/\r\n/g, '\n').split('\n');
     const items = [];
     let sub = '';
-    let pending = null;      // 表格 / 段落缓冲
     let pendingArr = null;
     let lastLead = '';
+    let storyBuf = null;   // 一条完整消息（信号/来源/判断）攒在这里
 
+    function flushStory() {
+      if (!storyBuf) return;
+      const s = buildStory(storyBuf.lines, sub, lastLead);
+      storyBuf = null;
+      if (s) pushItem(s);
+    }
     function flushPending() {
+      flushStory();
       if (pendingArr && pendingArr.length) {
         const block = pendingArr.join('\n').trim();
         if (block) pushItem({ text: block, lead: lastLead, sub: sub });
       }
       pendingArr = null;
-      pending = null;
     }
 
     function pushItem(item) {
-      if (!item.text) return;
-      item.text = item.text.trim();
-      if (!item.text) return;
+      if (/^\s*页脚[：:]/.test(item.text || '')) return;
+      if (!item.text && !item.title) return;
+      item.text = (item.text || '').trim();
+      if (!item.text && !item.title) return;
       if (/^(-{3,}|={3,})$/.test(item.text)) return;
       item.lead = (item.lead || '').replace(/^\s*[-*]\s*/, '').trim();
       items.push(item);
+    }
+
+    /* 一条消息的开头：**信号1** … / 今日一句话：… / **动态** … */
+    function isStoryStart(l) {
+      if (/^\*\*[^*]{1,14}\*\*/.test(l)) return true;
+      if (/^(今日一句话|信号|动态|事件|工具|书名|知识|观点|预告)[：:]/.test(l)) return true;
+      return false;
+    }
+    /* 消息的后续行：来源 / 判断（紧跟在开头行后） */
+    function isStoryField(l) {
+      return /^\s*(来源|出处|判断|点评|解读|分析)[：:]/.test(l);
     }
 
     lines.forEach(function (raw) {
@@ -330,14 +348,35 @@ const App = (function () {
         sub = h3[1].trim();
         return;
       }
+      /* > 引用块也当作一条消息攒起来 */
+      if (/^\s*>/.test(line)) {
+        flushPending();
+        if (!storyBuf) storyBuf = { lines: [] };
+        storyBuf.lines.push(line.replace(/^\s*>\s?/, ''));
+        return;
+      }
       if (!line.trim()) {
         flushPending();
         return;
       }
       /* markdown 表格：连续 | 行 */
       if (/^\s*\|.*\|\s*$/.test(line)) {
+        flushStory();
         if (!pendingArr) pendingArr = [];
         pendingArr.push(line.trim());
+        return;
+      }
+
+      const t = line.trim();
+      /* 已开消息后的 来源/判断 行：并入本条（必须先于 flushPending） */
+      if (storyBuf && isStoryField(t)) {
+        storyBuf.lines.push(t);
+        return;
+      }
+      /* 新消息开头：先收掉上一条/表格，再开新缓冲 */
+      if (isStoryStart(t)) {
+        flushPending();
+        storyBuf = { lines: [t] };
         return;
       }
       flushPending();
@@ -345,7 +384,7 @@ const App = (function () {
       /* 顶级列表项（- / 1. / •） */
       const li = /^\s*(?:[-*+]|\d+[.、)]|•)\s+(.*)$/.exec(line);
       if (li && !/^\s{2,}/.test(line)) {
-        pushItem({ text: li[1], lead: lastLead, sub: sub });
+        pushItem(splitInlineJudgment({ text: li[1], lead: lastLead, sub: sub }));
         return;
       }
       /* 嵌套列表行：并进上一条 */
@@ -354,15 +393,66 @@ const App = (function () {
         return;
       }
       /* 普通段落：以「：」结尾且后面跟列表时，作为引导语 */
-      const para = line.trim();
-      if (/[：:]$/.test(para) && para.length <= 40) {
-        lastLead = para;
+      if (/[：:]$/.test(t) && t.length <= 40) {
+        lastLead = t;
         return;
       }
-      pushItem({ text: para, lead: '', sub: sub });
+      pushItem(splitInlineJudgment({ text: t, lead: '', sub: sub }));
     });
     flushPending();
     return items;
+  }
+
+  /* 一条消息（信号/来源/判断…）拆成结构化字段 */
+  function buildStory(rawLines, sub, lastLead) {
+    const f = { title: '', source: '', judgment: '', body: [] };
+    rawLines.forEach(function (l) {
+      l = String(l).trim();
+      if (!l) return;
+      /* **标签** 内容（可无冒号） */
+      const bm = /^\*\*([^*]{1,14})\*\*\s*[：:]?\s*(.*)$/.exec(l);
+      if (bm) {
+        const label = bm[1].trim(), rest = (bm[2] || '').trim();
+        if (/来源|出处/.test(label)) { if (rest) f.source = rest; }
+        else if (/判断|点评|解读|分析/.test(label)) { if (rest) f.judgment = rest; }
+        else if (/信号|动态|事件|工具|书名|知识|一句话|观点|预告/.test(label)) {
+          f.title = f.title ? (f.title + ' ' + rest) : rest;
+        } else { f.body.push(rest || l); }
+        return;
+      }
+      /* 标签：内容 */
+      const pm = /^([^*：:]{1,14})[：:]\s*(.*)$/.exec(l);
+      if (pm) {
+        const label = pm[1].trim(), val = (pm[2] || '').trim();
+        if (/来源|出处/.test(label)) { if (val) f.source = val; }
+        else if (/判断|点评|解读|分析/.test(label)) { if (val) f.judgment = val; }
+        else if (/信号|动态|事件|工具|书名|知识|一句话|观点|预告/.test(label)) {
+          f.title = f.title ? (f.title + ' ' + val) : val;
+        } else { f.body.push(l); }
+        return;
+      }
+      f.body.push(l);
+    });
+    const body = f.body.join('\n').trim();
+    const text = [f.title, body, f.judgment, f.source ? ('来源：' + f.source) : ''].filter(Boolean).join('\n').trim();
+    if (!text && !f.source) return null;
+    return {
+      text: text, title: f.title, body: body,
+      source: f.source, judgment: f.judgment,
+      lead: lastLead, sub: sub, grouped: true
+    };
+  }
+
+  /* 列表/段落里内联的「判断：」拆出来，保持一条卡 */
+  function splitInlineJudgment(item) {
+    const m = /^([\s\S]*?)\s*判断[：:]([\s\S]*)$/.exec(item.text);
+    if (m && m[1].trim() && m[2].trim()) {
+      item.body = m[1].trim();
+      item.judgment = m[2].trim();
+      item.grouped = true;
+      item.title = item.title || '';
+    }
+    return item;
   }
 
   function itemFingerprint(text) {
@@ -433,6 +523,11 @@ const App = (function () {
             text: item.text,
             lead: item.lead || '',
             sub: item.sub || '',
+            title: item.title || '',
+            body: item.body || '',
+            judgment: item.judgment || '',
+            source: item.source || '',
+            grouped: !!item.grouped,
             sectionId: sid,
             sectionName: (sectionMap[sid] || sectionMap.other).name,
             briefId: brief.id,
@@ -547,11 +642,21 @@ const App = (function () {
     const g = groups.signal;
     if (!g || !g.items.length) return '';
     let inner = '';
+    const sources = [];
     g.items.forEach(function (item, i) {
       inner += renderItem(item, { rank: i + 1 });
+      if (item.source) sources.push(item.source);
     });
+    inner += renderSourcesFooter(sources);
     return renderSectionShell('signal', '深度信息差', inner, g.items.length,
       '热榜之外、别人没说的那部分，按重要度排序');
+  }
+
+  function renderSourcesFooter(sources) {
+    const dedup = [];
+    (sources || []).forEach(function (x) { if (x && dedup.indexOf(x) < 0) dedup.push(x); });
+    if (!dedup.length) return '';
+    return '<div class="section-sources">📎 来源：' + dedup.map(escapeHtml).join(' · ') + '</div>';
   }
 
   /* ============================================
@@ -584,9 +689,12 @@ const App = (function () {
 
       if (!items.length) return;
       let inner = '';
+      const sources = [];
       items.forEach(function (item, i) {
         inner += renderItem(item, { rank: def.id === 'action' || def.id === 'gap' ? 0 : i + 1 });
+        if (item.source) sources.push(item.source);
       });
+      inner += renderSourcesFooter(sources);
       html += renderSectionShell(def.id, def.name.replace(/^\S+\s*/, ''), inner, items.length);
     });
     return html;
@@ -611,9 +719,16 @@ const App = (function () {
   function renderItem(item, opts) {
     opts = opts || {};
     const raw = item.text || '';
-    const split = splitTitle(raw);
-    const title = split.title;
-    const content = split.content;
+
+    let title = '', content = '';
+    if (item.grouped && (item.title || item.body || item.judgment)) {
+      title = item.title || '';
+      content = item.body || '';
+    } else {
+      const split = splitTitle(raw);
+      title = split.title;
+      content = split.content;
+    }
 
     const key = item.fp || itemFingerprint(raw);
     const attrs =
@@ -631,18 +746,24 @@ const App = (function () {
     if (opts.rank) meta.push('<span class="item-rank">#' + opts.rank + '</span>');
     if (item.period) meta.push('<span class="item-src">' + escapeHtml(item.period + (item.date ? ' · ' + item.date.slice(5) : '')) + '</span>');
 
-    let body = '';
-    if (title) body += '<div class="item-title">' + renderInline(title) + '</div>';
-    if (content) body += '<div class="item-content">' + renderMarkdown(content) + '</div>';
-
     html += '<div class="item-body">';
     if (meta.length) html += '<div class="item-meta">' + meta.join('') + '</div>';
-    html += body;
+    if (title) html += '<div class="item-title">' + renderInline(title) + '</div>';
+    if (content) html += '<div class="item-content">' + renderMarkdown(content) + '</div>';
+    if (item.judgment) html += '<div class="item-judgment"><span class="j-tag">判断</span><div class="j-text">' + renderMarkdown(item.judgment) + '</div></div>';
     html += '</div>';
 
-    html += renderItemActions();
+    if (showActions(item)) html += renderItemActions();
     html += '</article>';
     return html;
+  }
+
+  function showActions(item) {
+    if (item.sectionId === 'gap') return false;
+    const t = String(item.text || item.title || '').replace(/[\s>]/g, '');
+    if (/页脚|数据：搜索|生成\s*\d{1,2}:\d{2}/.test(t)) return false;
+    if (t.length < 10) return false;
+    return true;
   }
 
   function renderItemActions() {
@@ -773,6 +894,22 @@ const App = (function () {
     }
     if (!best || best.values.length < 2) return null;
 
+    /* 全是百分比列、合计接近 100%：用环形图更直观 */
+    var units = {};
+    best.values.forEach(function (v) { units[v.unit] = (units[v.unit] || 0) + 1; });
+    var allPct = best.values.every(function (v) { return v.unit === '%' || v.unit === '％'; });
+    if (allPct) {
+      var sum = best.values.reduce(function (a, v) { return a + Math.abs(v.value); }, 0);
+      if (sum >= 70 && sum <= 130) return buildDonutChart(best);
+    }
+
+    /* 量级悬殊（最大/最小 > 40 倍）时条形图会被压扁成线，宁可不画 */
+    var positives = best.values.map(function (v) { return Math.abs(v.value); }).filter(function (x) { return x > 0; });
+    if (positives.length >= 2) {
+      var pMax = Math.max.apply(null, positives), pMin = Math.min.apply(null, positives);
+      if (pMax / pMin > 40) return null;
+    }
+
     const absMax = Math.max.apply(null, best.values.map(function (v) { return Math.abs(v.value); })) || 1;
     let html = '<div class="chart"><div class="chart-head">' + escapeHtml(best.head) + '<span class="chart-hint">' + (best.ordinal ? '程度对比' : '数值对比') + '</span></div>';
     best.values.forEach(function (v) {
@@ -787,6 +924,31 @@ const App = (function () {
     html += '</div>';
 
     const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.firstChild;
+  }
+
+  function buildDonutChart(best) {
+    var values = best.values.filter(function (v) { return v.value > 0; });
+    if (values.length < 2) return null;
+    var total = values.reduce(function (a, v) { return a + v.value; }, 0) || 1;
+    var palette = ['#7C90B8','#C99A9A','#A8BFA8','#D4B896','#9FB6CD','#C4A7C0','#A8C5C5','#C9B08A'];
+    var acc = 0, stops = [];
+    values.forEach(function (v, i) {
+      var from = acc / total * 100;
+      acc += v.value;
+      var to = acc / total * 100;
+      stops.push(palette[i % palette.length] + ' ' + from.toFixed(1) + '% ' + to.toFixed(1) + '%');
+    });
+    var conic = 'conic-gradient(' + stops.join(',') + ')';
+    var html = '<div class="chart chart-donut-wrap"><div class="chart-head">' + escapeHtml(best.head) + '<span class="chart-hint">占比</span></div>' +
+      '<div class="donut-row"><div class="donut" style="background:' + conic + '"><div class="donut-hole"><span>' + values.length + '项</span></div></div>' +
+      '<div class="donut-legend">';
+    values.forEach(function (v, i) {
+      html += '<div class="lg-row"><i style="background:' + palette[i % palette.length] + '"></i><span class="lg-name">' + escapeHtml(clip(v.label, 12)) + '</span><b>' + escapeHtml(v.raw) + '</b></div>';
+    });
+    html += '</div></div></div>';
+    var div = document.createElement('div');
     div.innerHTML = html;
     return div.firstChild;
   }

@@ -245,9 +245,43 @@ const Annotation = (function () {
   /* ============ Obsidian ============ */
   function buildPayload(text, section, date) {
     var d = date || isoDateFromPage();
-    var sec = (section || '简报').replace(/[\s#\[\]]+/g, '');
-    var lines = String(text || '').split('\n').map(function (l) { return '> ' + l.trim(); }).join('\n');
-    return '#简报/' + sec + ' #日期/' + d + '\n' + lines + '\n来源：阿鹏资讯站 · ' + (section || '简报') + ' · ' + d;
+    var sec = (section || '简报').replace(/[\s#\[\]]+/g, '') || '深度信息差';
+    var ymd = d.replace(/-/g, '/');
+    var raw = String(text || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+
+    var source = '', topic = '', bodyLines = [];
+    raw.forEach(function (l) {
+      var m = /^(?:来源|出处)[：:]\s*(.+)$/.exec(l);
+      if (m) { source = m[1].trim(); return; }
+      var jm = /^(?:判断|点评|解读|分析)[：:]\s*(.+)$/.exec(l);
+      if (jm) { bodyLines.push('判断：' + jm[1].trim()); return; }
+      var bm = /^\*\*[^*]{1,14}\*\*\s*[：:]?\s*(.*)$/.exec(l);
+      if (bm) {
+        var rest = (bm[1] || '').trim();
+        if (rest) { if (!topic) topic = rest; bodyLines.push(rest); }
+        return;
+      }
+      if (!topic && l.length > 4) topic = l.replace(/[。，,\s]+$/, '');
+      bodyLines.push(l);
+    });
+
+    var fm = [
+      '---',
+      'tags:',
+      '  - 碎片处理/' + sec,
+      'created: ' + ymd,
+      'updated: ' + ymd,
+      'status: active',
+      'source: ' + source,
+      'type: raw-fragment',
+      'confidence: ',
+      'purpose: ',
+      'topic: ' + topic,
+      '---',
+      ''
+    ];
+    var body = '# ' + topic + '\n\n' + (bodyLines.join('\n') || '') + '\n';
+    return fm.join('\n') + body + '\n---\n来源：阿鹏资讯站 · ' + (section || '简报') + ' · ' + d;
   }
 
   async function copyText(text) {
