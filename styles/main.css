@@ -627,7 +627,7 @@ html.is-uc .loading .spinner { animation-duration: 1s; }
 
 /* 各大板块大框：莫兰迪浅色 1px 细边框，底色不变
    v3.2：板块 id 与 v6.0 简报对齐（hot→apeng_hot，新增 mood/fx/tools/ai_tools/ai/startup） */
-.section { border: 4px solid #E5E7EB; border-radius: 14px; }
+.section { border: 3px solid #E5E7EB; border-radius: 14px; }
 .section[data-section=apeng_hot] { border-color: #E7C6B8; }
 .section[data-section=signal]  { border-color: #CDBFD9; }
 .section[data-section=mood]    { border-color: #D6C2CE; }
