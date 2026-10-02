@@ -35,7 +35,7 @@ const App = (function () {
      ============================================ */
   const SECTIONS = [
     { id: 'apeng_hot', name: '🔥 阿鹏热榜', icon: '🔥', priority: 10, re: /阿鹏热榜|热榜|热搜|在聊什么/ },
-    { id: 'signal', name: '⚡ 深度信号', icon: '⚡', priority: 9, re: /深度信号|深度|信息差/ },
+    { id: 'signal', name: '⚡ 深度信号 · 信息差', icon: '⚡', priority: 9, re: /深度信号|深度|信息差/ },
     { id: 'mood', name: '🧠 社会情绪', icon: '🧠', priority: 8, re: /社会情绪|情绪与叙事|焦虑|社会叙事/ },
     { id: 'mind', name: '🧠 心理与行为', icon: '🧠', priority: 6, re: /心理与行为|行为研究|心理学|注意力窗口|上瘾机制/ },
     { id: 'creator', name: '🎥 创作者经济', icon: '🎥', priority: 7, re: /创作者经济|平台动态|创作者|自媒体/ },
@@ -696,8 +696,11 @@ const App = (function () {
     const meta = [];
     if (item.sub) meta.push('<span class="item-sub">' + escapeHtml(item.sub) + '</span>');
     if (item.lead) meta.push('<span class="item-lead">' + escapeHtml(item.lead) + '</span>');
-    if (opts.rank) meta.push('<span class="item-rank">#' + opts.rank + '</span>');
-    if (item.period) meta.push('<span class="item-src">' + escapeHtml(item.period + (item.date ? ' · ' + item.date.slice(5) : '')) + '</span>');
+    /* 序号 + 时段标签：包进同一个容器整体右对齐（否则两个 auto margin 会平分空白，序号卡中间） */
+    const metaRight = [];
+    if (opts.rank) metaRight.push('<span class="item-rank">' + opts.rank + '</span>');
+    if (item.period) metaRight.push('<span class="item-src">' + escapeHtml(item.period + (item.date ? ' · ' + item.date.slice(5) : '')) + '</span>');
+    if (metaRight.length) meta.push('<span class="item-meta-right">' + metaRight.join('') + '</span>');
 
     html += '<div class="item-body">';
     if (meta.length) html += '<div class="item-meta">' + meta.join('') + '</div>';

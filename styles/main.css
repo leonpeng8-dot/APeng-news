@@ -213,10 +213,15 @@ button { font-family: inherit; }
 }
 .news-item .item-lead { font-size: 12.5px; color: var(--ink-4); }
 .news-item .item-rank {
-  font-size: 12px; font-weight: 700; color: #FFF;
-  background: var(--accent); padding: 1px 9px; border-radius: 10px;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 13px; font-weight: 700; color: #1F7A4D;
+  background: #E4F5EA; padding: 1px 10px; border-radius: 10px;
+  white-space: nowrap;
 }
-.news-item .item-src { font-size: 12px; color: #B6BFCC; margin-left: auto; white-space: nowrap; }
+.news-item .item-src { font-size: 12px; color: #B6BFCC; white-space: nowrap; }
+.news-item .item-meta-right {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 8px;
+}
 
 .news-item .item-title {
   font-size: 16.5px; font-weight: 650; line-height: 1.55;
