@@ -787,3 +787,8 @@ html.is-uc .loading .spinner { animation-duration: 1s; }
 
 /* 判断块字号略放大 */
 .item-judgment { font-size: 14px !important; line-height: 1.7 !important; }
+/* 图表标签宽度放宽，不再截断中文 */
+.chart .chart-label {
+  width: auto !important; flex: 0 0 auto; max-width: 110px;
+  white-space: normal; overflow: visible; text-overflow: clip;
+}
