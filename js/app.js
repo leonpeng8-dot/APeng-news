@@ -39,6 +39,7 @@ const App = (function () {
     { id: 'mood', name: '🧠 社会情绪', icon: '🧠', priority: 8, re: /社会情绪|情绪与叙事|焦虑|社会叙事/ },
     { id: 'mind', name: '🧠 心理与行为', icon: '🧠', priority: 6, re: /心理与行为|行为研究|心理学|注意力窗口|上瘾机制/ },
     { id: 'creator', name: '🎥 创作者经济', icon: '🎥', priority: 7, re: /创作者经济|平台动态|创作者|自媒体/ },
+    { id: 'crossborder', name: '🛒 跨境电商/出海', icon: '🛒', priority: 7, re: /跨境电商|出海|跨境贸易|海外市场|跨境直播/ },
     { id: 'fx', name: '💱 汇率与跨境资金', icon: '💱', priority: 7, re: /汇率|跨境资金|离岸|在岸/ },
     { id: 'market', name: '📈 市场数据', icon: '📈', priority: 7, re: /市场|A股|美股|港股|收盘|盘中|加密|币圈|大宗|商品|黄金|白银|原油|大豆|玉米|利率|债|基金/ },
     { id: 'tools', name: '🔧 工具与效率', icon: '🔧', priority: 6, re: /工具与效率|工具更新|效率更新/ },
