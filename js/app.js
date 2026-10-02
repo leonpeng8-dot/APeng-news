@@ -1031,6 +1031,8 @@ const App = (function () {
       if (pMax / pMin > 40) return null;
     }
 
+    /* 按数值从大到小排，热度高的排上面 */
+    best.values.sort(function (a, b) { return Math.abs(b.value) - Math.abs(a.value); });
     const absMax = Math.max.apply(null, best.values.map(function (v) { return Math.abs(v.value); })) || 1;
     let html = '<div class="chart"><div class="chart-head">' + escapeHtml(best.head) + '<span class="chart-hint">' + (best.ordinal ? '程度对比' : '数值对比') + '</span></div>';
     best.values.forEach(function (v) {
