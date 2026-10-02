@@ -456,10 +456,21 @@ const App = (function () {
       else if (/我的观点|我的判断/.test(label)) { if (rest) f.opinion = rest; cur = 'body'; }
       else if (/其他观点|别人的观点|他人观点|媒体观点/.test(label)) { if (rest) f.others.push(rest); cur = 'others'; }
       else if (/判断|点评|解读|分析/.test(label)) { if (rest) f.judgment = rest; cur = 'body'; }
-      else if (/信号|动态|事件|工具|书名|知识|一句话|观点|预告|标题/.test(label)) {
-        f.title = f.title ? (f.title + ' ' + rest) : rest; cur = 'body';
-      } else if (/正文|内容|详情/.test(label)) { if (rest) f.body.push(rest); cur = 'body'; }
-      else { f.body.push(rest || l); cur = 'body'; }
+      else if (/正文|内容|详情/.test(label)) { if (rest) f.body.push(rest); cur = 'body'; }
+      else if (/^(信号\d*|动态|事件|工具|书名|知识|一句话|观点|预告|标题)$/.test(label)) {
+        /* 旧格式标签（信号1/动态/事件…）→ 标题 = 后面的内容 */
+        f.title = f.title ? (f.title + ' ' + rest) : (rest || label);
+        cur = 'body';
+      } else if (bm) {
+        /* 加粗的实际标题（**华为赛力斯签五年** / **王石…**）→ 标题 = 加粗文本 + 括号数字 */
+        const full = rest ? (label + ' ' + rest) : label;
+        f.title = f.title ? (f.title + ' ' + full) : full;
+        cur = 'body';
+      } else {
+        /* 无加粗的「标签：内容」其余 → 正文 */
+        f.body.push(rest || l);
+        cur = 'body';
+      }
     });
     const body = f.body.join('\n').trim();
     const text = [f.title, body, f.opinion, f.others.join('；'), f.judgment, f.source ? ('来源：' + f.source) : ''].filter(Boolean).join('\n').trim();
