@@ -866,7 +866,14 @@ const App = (function () {
         best = { head: head || '数值', values: values, ordinal: ordinal > numeric };
       }
     }
-    if (!best || best.values.length < 2) return null;
+    if (!best || best.values.length < 3) return null;
+
+    /* 数值差距太小（<5%）：画条形图看不出差别，不画 */
+    var pos0 = best.values.map(function (v) { return Math.abs(v.value); }).filter(function (x) { return x > 0; });
+    if (pos0.length >= 2) {
+      var mx = Math.max.apply(null, pos0), mn = Math.min.apply(null, pos0);
+      if ((mx - mn) / mn < 0.05) return null;
+    }
 
     /* 全是百分比列、合计接近 100%：用环形图更直观 */
     var units = {};

@@ -753,3 +753,37 @@ html.is-uc .loading .spinner { animation-duration: 1s; }
 .item-content table th { background: #F9FAFB; font-weight: 600; color: #374151; }
 .cell-up { color: #DC2626; font-weight: 600; }
 .cell-down { color: #059669; font-weight: 600; }
+/* === v3.4 表格分区控制 + period tag + 判断字号 === */
+
+/* 全局表格：默认不横滑（常规内容正常排版） */
+.item-content table {
+  display: table !important; overflow: visible !important;
+  white-space: normal !important;
+}
+.item-content table th, .item-content table td {
+  white-space: normal !important; word-break: break-word;
+}
+
+/* 社会情绪/国际板块：表格太宽，允许横滑 */
+.section[data-section=mind] .item-content table,
+.section[data-section=world] .item-content table,
+.section[data-section=policy] .item-content table {
+  display: block !important; overflow-x: auto !important;
+}
+.section[data-section=mind] .item-content th,
+.section[data-section=mind] .item-content td,
+.section[data-section=world] .item-content th,
+.section[data-section=world] .item-content td,
+.section[data-section=policy] .item-content th,
+.section[data-section=policy] .item-content td {
+  white-space: nowrap !important;
+}
+
+/* period 标签（午间/晚间）加底色 */
+.item-src {
+  display: inline-block; padding: 1px 7px; border-radius: 8px;
+  background: #EEF2F7; color: #64748B; font-size: 11px;
+}
+
+/* 判断块字号略放大 */
+.item-judgment { font-size: 14px !important; line-height: 1.7 !important; }
