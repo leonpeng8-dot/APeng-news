@@ -730,3 +730,21 @@ html.is-uc .loading .spinner { animation-duration: 1s; }
   .chart .chart-label { width: 74px; font-size: 12px; }
   .chart .chart-value { width: 72px; font-size: 12px; }
 }
+/* === v3.3 行动建议分组 + 表格紧凑 + 涨跌箭头 === */
+.action-group { margin-bottom: 14px; }
+.action-group:last-child { margin-bottom: 0; }
+.action-group-head {
+  font-size: 13px; font-weight: 600; color: #6B7280;
+  padding: 6px 10px; margin-bottom: 6px;
+  background: #F5F5F4; border-radius: 6px;
+}
+.item-content table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+  margin: 6px 0; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.item-content table th, .item-content table td {
+  padding: 6px 10px; border: 1px solid #E5E7EB; text-align: left; white-space: nowrap;
+}
+.item-content table th { background: #F9FAFB; font-weight: 600; color: #374151; }
+.cell-up { color: #DC2626; font-weight: 600; }
+.cell-down { color: #059669; font-weight: 600; }

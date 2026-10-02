@@ -617,10 +617,27 @@ const App = (function () {
 
       let inner = '';
       const sources = [];
-      g.items.forEach(function (item, i) {
-        inner += renderItem(item, { rank: withRank ? i + 1 : 0 });
-        if (item.source) sources.push(item.source);
-      });
+      /* 行动建议：按身份分组（📱 自媒体 / 💻 独立开发者 / 💰 投资者 / 🎯 项目推进） */
+      if (def.id === 'action' && g.items.some(function (x) { return x.sub; })) {
+        const groups = {};
+        const order = [];
+        g.items.forEach(function (item) {
+          const k = item.sub || '其他';
+          if (!groups[k]) { groups[k] = []; order.push(k); }
+          groups[k].push(item);
+          if (item.source) sources.push(item.source);
+        });
+        order.forEach(function (k) {
+          inner += '<div class="action-group"><div class="action-group-head">' + escapeHtml(k) + '</div>';
+          groups[k].forEach(function (item) { inner += renderItem(item, { rank: 0 }); });
+          inner += '</div>';
+        });
+      } else {
+        g.items.forEach(function (item, i) {
+          inner += renderItem(item, { rank: withRank ? i + 1 : 0 });
+          if (item.source) sources.push(item.source);
+        });
+      }
       inner += renderSourcesFooter(sources);
 
       const note = def.id === 'signal' ? '热榜之外、别人没说的那部分，按重要度排序' : '';
@@ -788,6 +805,17 @@ const App = (function () {
     wrap.innerHTML = html;
     const tables = Array.prototype.slice.call(wrap.querySelectorAll('table'));
     tables.forEach(function (table) {
+      /* 涨跌单元格：加箭头和颜色 */
+      Array.prototype.slice.call(table.querySelectorAll('td')).forEach(function (td) {
+        var t = td.textContent.trim();
+        if (/^(涨|↑|\+\d)/.test(t) || /涨$/.test(t)) {
+          td.classList.add('cell-up');
+          if (/^涨/.test(t)) td.innerHTML = '↑ ' + escapeHtml(t);
+        } else if (/^(跌|↓|-\d|−\d)/.test(t) || /跌/.test(t)) {
+          td.classList.add('cell-down');
+          if (/^跌/.test(t)) td.innerHTML = '↓ ' + escapeHtml(t);
+        }
+      });
       const chart = buildChartFromTable(table);
       if (chart) {
         table.parentNode.insertBefore(chart, table);
