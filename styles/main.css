@@ -911,3 +911,18 @@ html.is-uc .loading .spinner { animation-duration: 1s; }
   }
   .item-content table td:first-child { min-width: 120px !important; }
 }
+/* === v10 新板块边框配色（莫兰迪） === */
+.section[data-section=macro]    { border-color: #B8C5D6; }  /* 蓝灰 */
+.section[data-section=calendar]{ border-color: #C9BFD4; }  /* 淡紫 */
+.section[data-section=fringe]  { border-color: #D4B8C5; }  /* 藕粉——异端感 */
+
+/* 边缘观察卡片：左侧加一条细紫线，提示"这是异端" */
+.section[data-section=fringe] .news-item {
+  border-left: 3px solid #B088A8 !important;
+  background: #FDFAFB;
+}
+
+/* 宏观仪表盘：表格紧凑 */
+.section[data-section=macro] .item-content table {
+  font-size: 12.5px;
+}
