@@ -58,10 +58,9 @@ const App = (function () {
     { id: 'other', name: '🧩 其他', icon: '🧩', priority: 1, re: null }
   ];
 
-  /* 平台热榜聚合：外部聚合站，只放一个链接，不展开内容（与「阿鹏热榜」是两个东西） */
+  /* 平台热榜聚合：外部聚合站，只放一条外链，不展开内容（与「阿鹏热榜」是两个东西） */
   const PLATFORM_HOT = {
-    title: '平台热榜聚合',
-    note: '（有延迟）',
+    title: '各大平台热榜聚合站：',
     url: 'https://www.redian.me/',
     label: 'redian.me'
   };
@@ -592,7 +591,6 @@ const App = (function () {
     return '<div class="platform-hot">' +
       '<div class="platform-hot-head">' +
         '<span class="platform-hot-title">' + escapeHtml(PLATFORM_HOT.title) + '</span>' +
-        '<span class="platform-hot-note">' + escapeHtml(PLATFORM_HOT.note) + '</span>' +
       '</div>' +
       '<a class="platform-hot-link" href="' + escapeAttr(PLATFORM_HOT.url) + '" target="_blank" rel="noopener">' +
         escapeHtml(PLATFORM_HOT.label) +
