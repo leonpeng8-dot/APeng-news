@@ -346,7 +346,7 @@ const App = (function () {
     /* 一条消息的开头（标题类）：**标题** … / **信号1** … / 今日一句话：… */
     /* 字段类标签（正文/我的观点/判断/来源…）不算新消息开头 */
     function isStoryStart(l) {
-      const bm = /^\*\*([^*]{1,14})\*\*\s*[：:]?/.exec(l);
+      const bm = /^\*\*([^*]{1,22})\*\*\s*[：:]?/.exec(l);
       if (bm) {
         const label = bm[1].trim();
         if (/^(来源|出处|判断|点评|解读|分析|正文|内容|详情|我的观点|我的判断|其他观点|别人的观点|他人观点|媒体观点)$/.test(label)) return false;
@@ -445,7 +445,7 @@ const App = (function () {
       }
 
       /* **标签** 内容（可无冒号） / 标签：内容 */
-      const bm = /^\*\*([^*]{1,14})\*\*\s*[：:]?\s*(.*)$/.exec(l);
+      const bm = /^\*\*([^*]{1,22})\*\*\s*[：:]?\s*(.*)$/.exec(l);
       const pm = /^([^*：:]{1,14})[：:]\s*(.*)$/.exec(l);
       let label = '', rest = '';
       if (bm) { label = bm[1].trim(); rest = (bm[2] || '').trim(); }
