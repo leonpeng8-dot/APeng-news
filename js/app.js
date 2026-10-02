@@ -486,8 +486,8 @@ const App = (function () {
   /* 列表/段落里内联的「判断：」拆出来，保持一条卡 */
   function splitInlineJudgment(item) {
     const m = /^([\s\S]*?)\s*判断[：:]([\s\S]*)$/.exec(item.text);
-    if (m && m[1].trim() && m[2].trim()) {
-      item.body = m[1].trim();
+    if (m && m[2] && m[2].trim()) {
+      if (m[1].trim()) item.body = m[1].trim();
       item.judgment = m[2].trim();
       item.grouped = true;
       item.title = item.title || '';
