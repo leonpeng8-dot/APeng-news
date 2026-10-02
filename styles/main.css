@@ -862,3 +862,21 @@ html.is-uc .loading .spinner { animation-duration: 1s; }
   white-space: normal; overflow: visible; text-overflow: clip;
   text-align: left; padding-right: 8px;
 }
+/* === v3.6 彻底修复手机端表格：tr/td 恢复表格单元格，外层横滑 === */
+@media (max-width: 640px) {
+  .item-content table {
+    display: block !important; overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch; border: none !important;
+  }
+  .item-content table thead,
+  .item-content table tbody,
+  .item-content table tr,
+  .item-content table th,
+  .item-content table td {
+    display: table-cell !important; width: auto !important;
+    white-space: nowrap !important;
+  }
+  .item-content table thead { display: table-header-group !important; }
+  .item-content table tbody { display: table-row-group !important; }
+  .item-content table tr { display: table-row !important; }
+}
