@@ -793,8 +793,9 @@ const App = (function () {
     }
     html = sanitizeHtml(html);
     html = upgradeTables(html);
+    html = decorateHtml(html);
     html = applyCharts(html, opts);
-    return decorateHtml(html);
+    return html;
   }
 
   function renderInline(text) {

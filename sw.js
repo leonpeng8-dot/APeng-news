@@ -3,7 +3,7 @@
  * 缓存 index.html 本身 + 所有 CSS/JS 依赖 + 管理页
  * /api/ 与 Supabase 请求不缓存（数据要新）
  */
-const CACHE_NAME = 'apeng-news-v8';
+const CACHE_NAME = 'apeng-news-v9';
 
 const PRECACHE = [
   './',
