@@ -331,7 +331,9 @@ const App = (function () {
     }
 
     function pushItem(item) {
-      if (/^\s*页脚[：:]/.test(item.text || '')) return;
+      var txt = String(item.text || '');
+      if (/^\s*页脚[：:]/.test(txt)) return;
+      if (/^\s*数据[：:]\s*\d+\s*源|抓取\s*\d{1,2}:\d{2}|^\s*\d+\s*源\s*\d+\s*条/.test(txt)) return;
       if (!item.text && !item.title) return;
       item.text = (item.text || '').trim();
       if (!item.text && !item.title) return;
@@ -687,6 +689,9 @@ const App = (function () {
     if (item.judgment) html += '<div class="item-judgment"><span class="j-tag">判断</span><div class="j-text">' + renderMarkdown(item.judgment) + '</div></div>';
     html += '</div>';
 
+    /* 空卡片（只有 meta 标签、没有正文）直接不输出 */
+    if (!title && !content && !item.judgment) return '';
+
     if (showActions(item)) html += renderItemActions();
     html += '</article>';
     return html;
@@ -784,7 +789,10 @@ const App = (function () {
     const tables = Array.prototype.slice.call(wrap.querySelectorAll('table'));
     tables.forEach(function (table) {
       const chart = buildChartFromTable(table);
-      if (chart) table.parentNode.insertBefore(chart, table);
+      if (chart) {
+        table.parentNode.insertBefore(chart, table);
+        table.style.display = 'none';
+      }
     });
     return wrap.innerHTML;
   }
