@@ -64,7 +64,7 @@ async function fetchRecentBriefs(days) {
   var client = getClient();
   var startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
-  var startDateStr = startDate.toISOString().split('T')[0];
+  var startDateStr = localDateStr(startDate);
   var result = await client
     .from('briefs')
     .select('*')
