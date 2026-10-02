@@ -16,7 +16,7 @@ const Annotation = (function () {
   var currentDate = '';
   var hideTimer = null;
 
-  var OBS_FILE = '每日摘录';
+  var OBS_DIR = '00_碎片信息整理/_raw/每日重点关注';
 
   function init() {
     createMenu();
@@ -323,8 +323,12 @@ const Annotation = (function () {
       toast(copied ? '已复制，去 Obsidian 粘贴' : '复制失败，请长按选中文字手动复制');
       return;
     }
-    /* 电脑端：直接唤起 Obsidian 新建笔记 */
-    var uri = 'obsidian://new?file=' + encodeURIComponent(OBS_FILE) +
+    /* 电脑端：直接唤起 Obsidian 新建笔记（固定文件夹 + 日期+主题命名） */
+    var d = date || isoDateFromPage();
+    var firstLine = String(text || '').split('\n').map(function(l){return l.trim();}).find(function(l){return l;}) || '';
+    var title = firstLine.replace(/^\*\*[^*]{1,14}\*\*\s*[：:]?\s*/, '').replace(/[\\/:*?"<>|\r\n]/g, '').slice(0, 24) || '未命名';
+    var filePath = OBS_DIR + '/' + d + ' ' + title;
+    var uri = 'obsidian://new?file=' + encodeURIComponent(filePath) +
       '&content=' + encodeURIComponent(payload);
     try {
       window.location.href = uri;

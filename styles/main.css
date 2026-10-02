@@ -136,6 +136,24 @@ button { font-family: inherit; }
 .period-tab:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
 
 /* ============================================
+   平台热榜聚合（外部聚合站，只放一个链接）
+   与简报自带的「🔥 阿鹏热榜」是两个东西，刻意做得很轻，不占篇幅
+   ============================================ */
+.platform-hot {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: #F7F9FC; border: 1px solid #E9EEF4;
+  border-radius: 10px; padding: 9px 14px; margin-bottom: 14px;
+}
+.platform-hot-head { display: flex; align-items: baseline; gap: 5px; }
+.platform-hot-title { font-size: 14px; font-weight: 600; color: #5B6675; }
+.platform-hot-note { font-size: 11.5px; color: #A8B2BF; }
+.platform-hot-link {
+  font-size: 14px; font-weight: 600; color: var(--accent);
+  border-bottom: 1px dashed var(--accent); padding-bottom: 1px;
+}
+.platform-hot-link:hover { color: var(--accent-deep); border-bottom-style: solid; }
+
+/* ============================================
    板块
    ============================================ */
 .section {
@@ -607,13 +625,20 @@ html.is-uc .loading .spinner { animation-duration: 1s; }
    v3.1 修复：板块细边框 / 判断块 / 来源页脚 / 环形图 / 按钮缩排
    ============================================================ */
 
-/* 各大板块大框：莫兰迪浅色 1px 细边框，底色不变 */
-.section { border: 1px solid #E5E7EB; border-radius: 14px; }
-.section[data-section=hot]     { border-color: #E7C6B8; }
+/* 各大板块大框：莫兰迪浅色 1px 细边框，底色不变
+   v3.2：板块 id 与 v6.0 简报对齐（hot→apeng_hot，新增 mood/fx/tools/ai_tools/ai/startup） */
+.section { border: 2px solid #E5E7EB; border-radius: 14px; }
+.section[data-section=apeng_hot] { border-color: #E7C6B8; }
 .section[data-section=signal]  { border-color: #CDBFD9; }
+.section[data-section=mood]    { border-color: #D6C2CE; }
 .section[data-section=brief]   { border-color: #C8D2DE; }
 .section[data-section=market]  { border-color: #BCC9DE; }
+.section[data-section=fx]      { border-color: #BFD3C9; }
 .section[data-section=tech]    { border-color: #B9D2C8; }
+.section[data-section=ai]      { border-color: #B6CFD6; }
+.section[data-section=ai_tools]{ border-color: #C2D6C9; }
+.section[data-section=tools]   { border-color: #CBD3C2; }
+.section[data-section=startup] { border-color: #D3C8B4; }
 .section[data-section=estate]  { border-color: #D8C5B1; }
 .section[data-section=sports]   { border-color: #C5D5BB; }
 .section[data-section=ent]     { border-color: #E5C5CF; }
