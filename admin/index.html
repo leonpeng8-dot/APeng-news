@@ -140,6 +140,8 @@
         function submit() {
           if (input.value === PASSWORD) {
             sessionStorage.setItem(KEY, '1');
+            /* admin.js 要用它向 /api/ingest 证明身份（服务端校验，比原来的纯前端判断更严） */
+            sessionStorage.setItem('apeng_admin_pass', PASSWORD);
             unlock();
           } else {
             err.textContent = '无权限访问：密码不正确';

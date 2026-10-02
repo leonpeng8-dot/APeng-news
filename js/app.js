@@ -26,29 +26,45 @@ const App = (function () {
   };
 
   /* ============================================
-     板块注册表（数组顺序 = 页面呈现顺序）
+     板块注册表（数组顺序 = 页面呈现顺序，也决定归类优先级：先匹配到的赢）
+     v3.1：同步 v6.0 简报的板块名。注意规则顺序 ——
+       · 「心理与行为研究 — 内容创作的底层逻辑」含「内容创作」，必须排在 creator 之前，
+         否则会被抢进创作者经济板块；
+       · 「社会情绪与叙事」含「情绪/叙事」，若不单独成块会掉进「心理/认知」；
+       · 「政策与监管信号」不能被 world 的 /政治/ 抢走（注意「政策」≠「政治」）。
      ============================================ */
   const SECTIONS = [
-    { id: 'hot', name: '🔥 热榜速览', icon: '🔥', priority: 10, re: /热榜|热搜|热议|在聊什么/ },
-    { id: 'signal', name: '⚡ 深度信息差', icon: '⚡', priority: 9, re: /深度|信息差|信号|值得记住|底层/ },
-    { id: 'brief', name: '📌 今日速览', icon: '📌', priority: 8, re: /一句话|速览|总结|视角|导读|综述|概览|今天/ },
-    { id: 'market', name: '📈 市场数据', icon: '📈', priority: 7, re: /市场|美股|收盘|盘中|A股|港股|汇率|跨境|加密|币圈|大宗|商品|黄金|原油|债|基金|利率|楼市数据/ },
-    { id: 'tech', name: '🚀 科技/AI', icon: '🚀', priority: 7, re: /AI|人工智能|模型|科技|初创|融资|工具|开发者|技术|芯片|半导体|开源|大模型/ },
-    { id: 'estate', name: '🏠 房地产', icon: '🏠', priority: 6, re: /房产|地产|楼市|房地产|住宅|房价/ },
-    { id: 'sports', name: '⚽ 体育/电竞', icon: '⚽', priority: 6, re: /体育|电竞|赛事|足球|篮球|网球|F1|英超|亚运|NBA|LPL|S赛/ },
-    { id: 'ent', name: '🎬 娱乐', icon: '🎬', priority: 5, re: /娱乐|影视|综艺|明星|游戏|演唱会|电影|剧|音乐|票房/ },
-    { id: 'creator', name: '🎥 创作者经济', icon: '🎥', priority: 5, re: /创作者|自媒体|平台动态|账号|对标|内容创作|小红书|抖音|公众号/ },
-    { id: 'mind', name: '🧠 心理/认知', icon: '🧠', priority: 4, re: /心理|行为|情绪|叙事|认知|人性/ },
-    { id: 'world', name: '🌍 国际/政治/社会', icon: '🌍', priority: 4, re: /国际|政治|外交|社会|地缘|冲突|时事|世界/ },
-    { id: 'books', name: '📚 书籍/知识', icon: '📚', priority: 4, re: /书籍|资源|知识|书单|阅读|学习|科普|研究|课程/ },
+    { id: 'apeng_hot', name: '🔥 阿鹏热榜', icon: '🔥', priority: 10, re: /阿鹏热榜|热榜|热搜|在聊什么/ },
+    { id: 'signal', name: '⚡ 深度信号', icon: '⚡', priority: 9, re: /深度信号|深度|信息差/ },
+    { id: 'mood', name: '🧠 社会情绪', icon: '🧠', priority: 8, re: /社会情绪|情绪与叙事|焦虑|社会叙事/ },
+    { id: 'mind', name: '🧠 心理与行为', icon: '🧠', priority: 6, re: /心理与行为|行为研究|心理学|注意力窗口|上瘾机制/ },
+    { id: 'creator', name: '🎥 创作者经济', icon: '🎥', priority: 7, re: /创作者经济|平台动态|创作者|自媒体/ },
+    { id: 'fx', name: '💱 汇率与跨境资金', icon: '💱', priority: 7, re: /汇率|跨境资金|离岸|在岸/ },
+    { id: 'market', name: '📈 市场数据', icon: '📈', priority: 7, re: /市场|A股|美股|港股|收盘|盘中|加密|币圈|大宗|商品|黄金|白银|原油|大豆|玉米|利率|债|基金/ },
+    { id: 'tools', name: '🔧 工具与效率', icon: '🔧', priority: 6, re: /工具与效率|工具更新|效率更新/ },
+    { id: 'ai_tools', name: '🚀 AI工具/产品', icon: '🚀', priority: 6, re: /AI工具|AI产品|AI 工具/ },
+    { id: 'ai', name: '🚀 AI大事件', icon: '🚀', priority: 7, re: /AI大事件|大事件|人工智能|大模型|AI发现|该知道|模型/ },
+    { id: 'tech', name: '🚀 科技', icon: '🚀', priority: 6, re: /科技|技术|开发者|芯片|半导体|开源/ },
+    { id: 'startup', name: '🚀 初创/融资', icon: '🚀', priority: 6, re: /初创|融资/ },
+    { id: 'estate', name: '🏠 房地产', icon: '🏠', priority: 6, re: /房地产|地产|房产|楼市|房价/ },
+    { id: 'sports', name: '⚽ 体育/电竞', icon: '⚽', priority: 6, re: /体育|电竞|赛事/ },
+    { id: 'ent', name: '🎬 娱乐', icon: '🎬', priority: 5, re: /娱乐|影视|综艺|明星|游戏|演唱会|电影|票房|音乐/ },
+    { id: 'world', name: '🌍 国际/政治/社会', icon: '🌍', priority: 5, re: /国际|政治|社会|地缘|外交|冲突/ },
     { id: 'policy', name: '📋 政策与监管', icon: '📋', priority: 6, re: /政策|监管|合规|法规|条例/ },
+    { id: 'books', name: '📚 书籍/知识', icon: '📚', priority: 4, re: /书籍|知识|书单|阅读|新书/ },
+    { id: 'brief', name: '📌 今日速览', icon: '📌', priority: 8, re: /一句话|速览|总结|视角|导读|综述|概览/ },
     { id: 'action', name: '💎 行动建议', icon: '💎', priority: 3, re: /行动|建议|预告|明日|待办|要做/ },
     { id: 'gap', name: '⚠️ 数据缺口', icon: '⚠️', priority: 2, re: /数据缺口|缺口|说明|备注/ },
     { id: 'other', name: '🧩 其他', icon: '🧩', priority: 1, re: null }
   ];
 
-  /* 热榜补位板块：简报里没有也要有，用热榜条目填（需求11） */
-  const HOT_FILL = { sports: 6, ent: 6, world: 6, books: 6 };
+  /* 平台热榜聚合：外部聚合站，只放一个链接，不展开内容（与「阿鹏热榜」是两个东西） */
+  const PLATFORM_HOT = {
+    title: '平台热榜聚合',
+    note: '（有延迟）',
+    url: 'https://www.redian.me/',
+    label: 'redian.me'
+  };
 
   const PERIOD_WEIGHT = { '早间': 1.5, '午间': 2, '晚间': 2.5, '夜间': 3, '专题': 1 };
 
@@ -223,9 +239,6 @@ const App = (function () {
     try {
       const briefs = await DB.fetchTodayBriefs();
       state.briefs = briefs;
-      try {
-        state.hot = (typeof HotNews !== 'undefined') ? await HotNews.load() : null;
-      } catch (e) { state.hot = null; }
       renderToday();
     } catch (err) {
       console.error('加载今日简报失败:', err);
@@ -238,9 +251,8 @@ const App = (function () {
     const groups = buildSectionGroups(briefs);
     let html = '';
 
-    html += renderHotSection(groups);
-    html += renderSignalSection(groups);
-    html += renderRestSections(groups);
+    html += renderPlatformHot();
+    html += renderAllSections(groups);
 
     if (!html.trim()) {
       html = '<div class="empty-state"><div class="icon">📭</div><p>今日暂无简报内容</p>' +
@@ -483,7 +495,7 @@ const App = (function () {
     if (/\d{4,}/.test(t)) s += 0.5;
     if (/⚠️|🚨|❗/.test(t)) s += 1.5;
     if (/💡/.test(t)) s += 1;
-    if (ctx.sectionId === 'signal' || ctx.sectionId === 'hot') s += 2.5;
+    if (ctx.sectionId === 'signal' || ctx.sectionId === 'apeng_hot') s += 2.5;
     s += Math.max(0, 1.5 - (ctx.indexInSection || 0) * 0.12);
     return s;
   }
@@ -569,87 +581,52 @@ const App = (function () {
   }
 
   /* ============================================
-     渲染：热榜速览
+     渲染：平台热榜聚合（只放外链，不展开内容）
+     这是「外部聚合站」，跟简报自带的「🔥 阿鹏热榜」是两个东西：
+       · 平台热榜聚合 = redian.me（外部站，有延迟）→ 只给一个链接
+       · 阿鹏热榜     = 简报正文第一个板块 → 正常渲染条目
+     以前这里会拉 5 个平台各 30 条热榜渲染进页面（150 个节点），
+     又占篇幅又费流量，现在只留一个链接。
      ============================================ */
-  function renderHotSection(groups) {
-    const hotItems = groups.hot ? groups.hot.items : [];
-    let inner = '';
-
-    if (state.hot && state.hot.boards && state.hot.boards.length) {
-      const boards = state.hot.boards;
-      inner += '<div class="hot-tabs">';
-      boards.forEach(function (b, i) {
-        inner += '<button class="hot-tab' + (i === 0 ? ' active' : '') + '" data-board="' + b.key + '">' +
-          escapeHtml(b.name) + '</button>';
-      });
-      inner += '</div>';
-      boards.forEach(function (b, i) {
-        inner += '<div class="hot-list' + (i === 0 ? ' open' : '') + '" data-board="' + b.key + '">';
-        b.list.slice(0, 30).forEach(function (item, idx) {
-          inner += renderHotRow(item, idx, b.name);
-        });
-        if (b.list.length > 10) {
-          inner += '<button class="hot-more">展开全部</button>';
-        }
-        inner += '</div>';
-      });
-      if (state.hot.updatedAt) {
-        inner += '<div class="hot-stamp">热榜更新：' + escapeHtml(formatClock(state.hot.updatedAt)) + '</div>';
-      }
-    }
-
-    if (hotItems.length) {
-      inner += '<div class="hot-brief">';
-      hotItems.slice(0, 20).forEach(function (item) {
-        inner += renderItem(item, { compact: true });
-      });
-      inner += '</div>';
-    }
-
-    if (!inner) return '';
-    return renderSectionShell('hot', '热榜速览', inner, hotItems.length);
-  }
-
-  function renderHotRow(item, idx, boardName) {
-    const heat = parseHeat(item.hot);
-    const pct = heat ? Math.max(6, Math.min(100, heat.pct)) : 0;
-    const hotText = item.hot ? escapeHtml(String(item.hot)) : '';
-    return '<div class="hot-row" data-hot-title="' + escapeHtml(item.title) + '">' +
-      '<span class="hot-rank rank-' + Math.min(idx + 1, 4) + '">' + (idx + 1) + '</span>' +
-      '<div class="hot-main">' +
-        '<a class="hot-title" href="' + escapeAttr(item.url || ('https://www.baidu.com/s?wd=' + encodeURIComponent(item.title))) + '" target="_blank" rel="noopener">' + escapeHtml(item.title) + '</a>' +
-        (heat ? '<div class="hot-bar"><i style="width:' + pct + '%"></i></div>' : '') +
+  function renderPlatformHot() {
+    return '<div class="platform-hot">' +
+      '<div class="platform-hot-head">' +
+        '<span class="platform-hot-title">' + escapeHtml(PLATFORM_HOT.title) + '</span>' +
+        '<span class="platform-hot-note">' + escapeHtml(PLATFORM_HOT.note) + '</span>' +
       '</div>' +
-      (hotText ? '<span class="hot-heat">' + hotText + '</span>' : '') +
+      '<a class="platform-hot-link" href="' + escapeAttr(PLATFORM_HOT.url) + '" target="_blank" rel="noopener">' +
+        escapeHtml(PLATFORM_HOT.label) +
+      '</a>' +
       '</div>';
-  }
-
-  function parseHeat(raw) {
-    const s = String(raw || '').replace(/[,\s]/g, '');
-    const m = /^([\d.]+)\s*(万|亿|w|W)?/.exec(s);
-    if (!m) return null;
-    let v = parseFloat(m[1]);
-    if (isNaN(v)) return null;
-    if (m[2] === '万' || m[2] === 'w' || m[2] === 'W') v *= 10000;
-    if (m[2] === '亿') v *= 1e8;
-    return { value: v, pct: 0, raw: raw };
   }
 
   /* ============================================
      渲染：深度信息差
      ============================================ */
-  function renderSignalSection(groups) {
-    const g = groups.signal;
-    if (!g || !g.items.length) return '';
-    let inner = '';
-    const sources = [];
-    g.items.forEach(function (item, i) {
-      inner += renderItem(item, { rank: i + 1 });
-      if (item.source) sources.push(item.source);
+  /* ============================================
+     渲染：全部板块（按 SECTIONS 顺序 = 阿鹏热榜 → 深度信号 → 其余）
+     ============================================ */
+  function renderAllSections(groups) {
+    let html = '';
+    SECTIONS.forEach(function (def) {
+      const g = groups[def.id];
+      if (!g || !g.items.length) return;
+
+      /* 行动建议/数据缺口/社会情绪不编号（本来就不是"第 N 条新闻"） */
+      const withRank = (def.id !== 'action' && def.id !== 'gap' && def.id !== 'mood');
+
+      let inner = '';
+      const sources = [];
+      g.items.forEach(function (item, i) {
+        inner += renderItem(item, { rank: withRank ? i + 1 : 0 });
+        if (item.source) sources.push(item.source);
+      });
+      inner += renderSourcesFooter(sources);
+
+      const note = def.id === 'signal' ? '热榜之外、别人没说的那部分，按重要度排序' : '';
+      html += renderSectionShell(def.id, def.name.replace(/^\S+\s*/, ''), inner, g.items.length, note);
     });
-    inner += renderSourcesFooter(sources);
-    return renderSectionShell('signal', '深度信息差', inner, g.items.length,
-      '热榜之外、别人没说的那部分，按重要度排序');
+    return html;
   }
 
   function renderSourcesFooter(sources) {
@@ -657,47 +634,6 @@ const App = (function () {
     (sources || []).forEach(function (x) { if (x && dedup.indexOf(x) < 0) dedup.push(x); });
     if (!dedup.length) return '';
     return '<div class="section-sources">📎 来源：' + dedup.map(escapeHtml).join(' · ') + '</div>';
-  }
-
-  /* ============================================
-     渲染：其余板块
-     ============================================ */
-  function renderRestSections(groups) {
-    const skip = { hot: 1, signal: 1 };
-    let html = '';
-    SECTIONS.forEach(function (def) {
-      if (skip[def.id]) return;
-      const g = groups[def.id];
-      let items = g ? g.items.slice() : [];
-
-      /* 简报里没有的必保板块，用热榜补位（需求11） */
-      if (!items.length && HOT_FILL[def.id] && state.hot) {
-        items = (state.hot.items || []).filter(function (x) { return x.section === def.id; }).slice(0, HOT_FILL[def.id]);
-        if (items.length) {
-          let inner = '';
-          items.forEach(function (x) {
-            inner += '<div class="hot-row">' +
-              '<span class="hot-rank rank-4">' + (x.rank || '') + '</span>' +
-              '<div class="hot-main"><a class="hot-title" target="_blank" rel="noopener" href="' +
-              escapeAttr(x.url || ('https://www.baidu.com/s?wd=' + encodeURIComponent(x.title))) + '">' + escapeHtml(x.title) + '</a>' +
-              '<div class="hot-src">来自 ' + escapeHtml(x.sourceName || '热榜') + '</div></div></div>';
-          });
-          html += renderSectionShell(def.id, def.name.replace(/^\S+\s*/, ''), inner, items.length, '简报今日无此板块，以下为热榜实时补位');
-        }
-        return;
-      }
-
-      if (!items.length) return;
-      let inner = '';
-      const sources = [];
-      items.forEach(function (item, i) {
-        inner += renderItem(item, { rank: def.id === 'action' || def.id === 'gap' ? 0 : i + 1 });
-        if (item.source) sources.push(item.source);
-      });
-      inner += renderSourcesFooter(sources);
-      html += renderSectionShell(def.id, def.name.replace(/^\S+\s*/, ''), inner, items.length);
-    });
-    return html;
   }
 
   function renderSectionShell(id, name, inner, count, note) {
@@ -1032,7 +968,7 @@ const App = (function () {
     const groups = buildSectionGroups([brief]);
     let html = '';
     SECTIONS.forEach(function (def) {
-      if (def.id === 'hot') return;
+      if (def.id === 'apeng_hot') return;
       const g = groups[def.id];
       if (!g || !g.items.length) return;
       let inner = '';
@@ -1195,8 +1131,7 @@ const App = (function () {
       }
       const groups = buildSectionGroups(results);
       let html = '<div class="search-count">找到 ' + results.length + ' 篇简报</div>';
-      html += renderSignalSection(groups);
-      html += renderRestSections(groups);
+      html += renderAllSections(groups);
       dom.mainContent.innerHTML = html;
       Annotation.bindAllIn(dom.mainContent);
       syncItemActionState();

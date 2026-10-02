@@ -11,7 +11,6 @@ const PRECACHE = [
   './styles/main.css',
   './js/userstore.js',
   './js/supabase.js',
-  './js/hot.js',
   './js/annotation.js',
   './js/app.js',
   './js/vendor/marked.min.js',

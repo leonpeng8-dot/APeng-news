@@ -29,10 +29,20 @@ function getClient() {
 // 简报操作
 // ============================================
 
+/** 本地日期（YYYY-MM-DD）
+ *  v3.1 修复：原来用 toISOString() 取的是 UTC 日期。中国时区（UTC+8）在
+ *  00:00-08:00 之间 UTC 还停在昨天，导致早上 7:30 那份简报被当成「昨天的」而不显示，
+ *  要等到 08:00 之后才出现。这里改用本地时区。
+ */
+function localDateStr(d) {
+  d = d || new Date();
+  var p = function (n) { return String(n).length < 2 ? '0' + n : String(n); };
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+
 /** 获取今日简报 */
 async function fetchTodayBriefs() {
-  var today = new Date().toISOString().split('T')[0];
-  return fetchBriefsByDate(today);
+  return fetchBriefsByDate(localDateStr());
 }
 
 /** 按日期获取简报 */

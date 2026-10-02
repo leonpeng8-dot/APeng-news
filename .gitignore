@@ -1,0 +1,6 @@
+# Hermes desktop attachments（桌面应用附件，勿提交）
+.hermes/
+
+# 本地临时文件
+*.pyc
+.DS_Store

@@ -12,6 +12,11 @@ const Admin = (function() {
   let sb = null;
   let tags = [];
 
+  /* 门禁密码：由 admin/index.html 的门禁存入 sessionStorage，用于向 /api/ingest 证明身份 */
+  function adminPass() {
+    try { return sessionStorage.getItem('apeng_admin_pass') || ''; } catch (e) { return ''; }
+  }
+
   function init() {
     initClient();
     setupDefaults();
@@ -222,7 +227,7 @@ const Admin = (function() {
     showToast('共 ' + sections.length + ' 个板块 / ' + count + ' 条');
   }
 
-  // === 提交写入 ===
+  // === 提交写入（v3.2：改走服务端 /api/ingest，不再用前端公开 key 直连数据库）===
   async function submitBrief() {
     var date = document.getElementById('briefDate').value;
     var period = document.getElementById('briefPeriod').value;
@@ -233,7 +238,7 @@ const Admin = (function() {
     if (!title) { showToast('请输入标题', 'error'); return; }
     if (!content) { showToast('请粘贴简报内容', 'error'); return; }
 
-    var items = parseMarkdownItems(content);
+    var items = parseMarkdownSections(content);
 
     var btn = document.getElementById('submitBtn');
     var origText = btn.textContent;
@@ -241,19 +246,26 @@ const Admin = (function() {
     btn.disabled = true;
 
     try {
-      var result = await sb.from('briefs').insert([{
-        date: date,
-        period: period,
-        title: title,
-        content: content,
-        items: items,
-        tags: tags,
-        is_public: true
-      }]).select();
+      var res = await fetch('/api/ingest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-pass': adminPass()
+        },
+        body: JSON.stringify({
+          date: date,
+          period: period,
+          title: title,
+          content: content,
+          items: items,
+          tags: tags,
+          is_public: true
+        })
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok || !data.ok) throw new Error(data.error || ('HTTP ' + res.status));
 
-      if (result.error) throw result.error;
-
-      showToast('✅ 写入成功！共 ' + items.length + ' 条', 'success');
+      showToast('✅ 写入成功！共 ' + items.length + ' 个板块', 'success');
       // 清空内容
       document.getElementById('briefContent').value = '';
       tags = [];
@@ -300,8 +312,12 @@ const Admin = (function() {
           if (!confirm('确定删除这条简报？')) return;
           var id = btn.getAttribute('data-id');
           try {
-            var delResult = await sb.from('briefs').delete().eq('id', id);
-            if (delResult.error) throw delResult.error;
+            var delRes = await fetch('/api/ingest?id=' + encodeURIComponent(id), {
+              method: 'DELETE',
+              headers: { 'x-admin-pass': adminPass() }
+            });
+            var delData = await delRes.json().catch(function () { return {}; });
+            if (!delRes.ok || !delData.ok) throw new Error(delData.error || ('HTTP ' + delRes.status));
             showToast('✅ 已删除', 'success');
             loadRecent();
           } catch (err) {
