@@ -902,3 +902,12 @@ html.is-uc .loading .spinner { animation-duration: 1s; }
   /* 第一列和短数字列不换行，长文本列给最大宽度 */
   .item-content table td:first-child { white-space: nowrap !important; font-weight: 600; }
 }
+/* === v3.8 手机端表格：每列最小宽度，一行约10字 === */
+@media (max-width: 640px) {
+  .item-content table th,
+  .item-content table td {
+    min-width: 110px !important;
+    max-width: 200px !important;
+  }
+  .item-content table td:first-child { min-width: 120px !important; }
+}
