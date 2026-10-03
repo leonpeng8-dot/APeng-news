@@ -540,6 +540,9 @@ const App = (function () {
     const groups = {};
     SECTIONS.forEach(function (s) { groups[s.id] = { id: s.id, def: s, items: [], headings: [] }; });
     const seen = {};
+    /* v10.1：简报原始顺序计数器。渲染时可用来「还原文档顺序」，
+       避免被 score 重排打乱（市场数据的「表格 → 判断」必须成对出现）。 */
+    let ordSeq = 0;
 
     briefs.forEach(function (brief) {
       const sections = splitSections(brief.content);
@@ -567,6 +570,7 @@ const App = (function () {
           seen[fp] = sid;
           group.items.push({
             fp: fp,
+            ord: ordSeq++,
             text: item.text,
             lead: item.lead || '',
             sub: item.sub || '',
@@ -642,6 +646,35 @@ const App = (function () {
   /* ============================================
      渲染：全部板块（按 SECTIONS 顺序 = 阿鹏热榜 → 深度信号 → 其余）
      ============================================ */
+
+  /* v10.1：按 ### 子块（item.sub）分组。
+     两个参数的区别就是「要不要还原简报原始顺序」：
+       · market  → restoreOrder=true：市场数据组内不按重要度排，
+                   严格跟随简报顺序（表格 → 判断 → 下一张表），阅读才顺。
+       · action  → restoreOrder=false：沿用原有的 score 排序。
+     返回 { order: [子块名…按首次出现], buckets: {子块名: [items]} } */
+  function groupBySub(items, restoreOrder) {
+    const src = restoreOrder
+      ? items.slice().sort(function (a, b) { return (a.ord || 0) - (b.ord || 0); })
+      : items;
+    const buckets = {};
+    const order = [];
+    src.forEach(function (item) {
+      const k = item.sub || '其他';
+      if (!buckets[k]) { buckets[k] = []; order.push(k); }
+      buckets[k].push(item);
+    });
+    return { order: order, buckets: buckets };
+  }
+
+  /* 渲染一个分组外壳：绿色左条 + 子块名 */
+  function renderGroupShell(cls, name, innerItems) {
+    return '<div class="' + cls + '-group">' +
+      '<div class="' + cls + '-group-head">' + escapeHtml(name) + '</div>' +
+      innerItems +
+      '</div>';
+  }
+
   function renderAllSections(groups) {
     let html = '';
     SECTIONS.forEach(function (def) {
@@ -649,25 +682,35 @@ const App = (function () {
       const g = groups[def.id];
       if (!g || !g.items.length) return;
 
-      /* 行动建议/数据缺口/社会情绪不编号（本来就不是"第 N 条新闻"） */
-      const withRank = (def.id !== 'action' && def.id !== 'gap' && def.id !== 'mood');
+      /* 行动建议/数据缺口/社会情绪/市场数据不编号（本来就不是"第 N 条新闻"） */
+      const withRank = (def.id !== 'action' && def.id !== 'gap' &&
+                        def.id !== 'mood' && def.id !== 'market');
 
       let inner = '';
       const sources = [];
-      /* 行动建议：按身份分组（📱 自媒体 / 💻 独立开发者 / 💰 投资者 / 🎯 项目推进） */
-      if (def.id === 'action' && g.items.some(function (x) { return x.sub; })) {
-        const groups = {};
-        const order = [];
-        g.items.forEach(function (item) {
-          const k = item.sub || '其他';
-          if (!groups[k]) { groups[k] = []; order.push(k); }
-          groups[k].push(item);
-          if (item.source) sources.push(item.source);
+      /* 市场数据：按 ### 子块分组（A股 / 美股 / 港股 / 加密 / 大宗商品），
+         组内保持简报原始顺序（不按重要度重排），保证「表格 → 判断」成对阅读。 */
+      if (def.id === 'market' && g.items.some(function (x) { return x.sub; })) {
+        const gr = groupBySub(g.items, true);
+        gr.order.forEach(function (k) {
+          let buf = '';
+          gr.buckets[k].forEach(function (item) {
+            buf += renderItem(item, { rank: 0 });
+            if (item.source) sources.push(item.source);
+          });
+          inner += renderGroupShell('market', k, buf);
         });
-        order.forEach(function (k) {
-          inner += '<div class="action-group"><div class="action-group-head">' + escapeHtml(k) + '</div>';
-          groups[k].forEach(function (item) { inner += renderItem(item, { rank: 0 }); });
-          inner += '</div>';
+      }
+      /* 行动建议：按身份分组（📱 自媒体 / 💻 独立开发者 / 💰 投资者 / 🎯 项目推进） */
+      else if (def.id === 'action' && g.items.some(function (x) { return x.sub; })) {
+        const gr = groupBySub(g.items, false);
+        gr.order.forEach(function (k) {
+          let buf = '';
+          gr.buckets[k].forEach(function (item) {
+            buf += renderItem(item, { rank: 0 });
+            if (item.source) sources.push(item.source);
+          });
+          inner += renderGroupShell('action', k, buf);
         });
       } else {
         g.items.forEach(function (item, i) {
@@ -1167,7 +1210,17 @@ const App = (function () {
       const g = groups[def.id];
       if (!g || !g.items.length) return;
       let inner = '';
-      g.items.forEach(function (item) { inner += renderItem(item, { compact: true }); });
+      /* v10.1：市场数据在归档详情里也按 ### 子块分组，和首页保持一致 */
+      if (def.id === 'market' && g.items.some(function (x) { return x.sub; })) {
+        const gr = groupBySub(g.items, true);
+        gr.order.forEach(function (k) {
+          let buf = '';
+          gr.buckets[k].forEach(function (item) { buf += renderItem(item, { compact: true }); });
+          inner += renderGroupShell('market', k, buf);
+        });
+      } else {
+        g.items.forEach(function (item) { inner += renderItem(item, { compact: true }); });
+      }
       html += renderSectionShell(def.id, def.name.replace(/^\S+\s*/, ''), inner, g.items.length);
     });
     container.innerHTML = html || '<div class="empty-state"><p>无结构化内容</p></div>';

@@ -778,6 +778,20 @@ html.is-uc .loading .spinner { animation-duration: 1s; }
   padding: 6px 10px; margin-bottom: 6px;
   background: #F5F5F4; border-radius: 6px;
 }
+/* v10.1：市场数据按 ### 子块分组（A股 / 美股 / 港股 / 加密 / 大宗商品）。
+   橙色左条 = 站点主色，用来和行动建议的灰色分组区分开。 */
+.market-group { margin-bottom: 18px; }
+.market-group:last-child { margin-bottom: 0; }
+.market-group-head {
+  display: inline-block;
+  font-size: 13px; font-weight: 700; letter-spacing: .02em; color: #374151;
+  padding: 5px 12px; margin-bottom: 8px;
+  background: #F5F7FA; border-left: 3px solid var(--accent); border-radius: 4px;
+}
+@media (max-width: 600px) {
+  .market-group { margin-bottom: 14px; }
+  .market-group-head { font-size: 12px; padding: 4px 10px; }
+}
 .item-content table {
   width: 100%; border-collapse: collapse; font-size: 13px;
   margin: 6px 0; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch;
