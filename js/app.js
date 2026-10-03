@@ -47,7 +47,7 @@ const App = (function () {
     { id: 'market', name: '📈 市场数据', icon: '📈', priority: 7, re: /市场|A股|美股|港股|收盘|盘中|加密|币圈|大宗|商品|黄金|白银|原油|大豆|玉米|利率|债|基金/ },
     { id: 'tools', name: '🔧 工具与效率', icon: '🔧', priority: 6, re: /工具与效率|工具更新|效率更新/ },
     { id: 'ai_tools', name: '🚀 AI工具/产品', icon: '🚀', priority: 6, re: /AI工具|AI产品|AI 工具/ },
-    { id: 'ai', name: '🚀 AI大事件', icon: '🚀', priority: 7, re: /AI大事件|大事件|人工智能|大模型|AI发现|该知道|模型/ },
+    { id: 'ai', name: '🚀 AI大事件', icon: '🚀', priority: 7, re: /AI大事件|大事件|人工智能|大模型|模型/ },
     { id: 'tech', name: '🚀 科技', icon: '🚀', priority: 6, re: /科技|技术|开发者|芯片|半导体|开源/ },
     { id: 'startup', name: '🚀 初创/融资', icon: '🚀', priority: 6, re: /初创|融资/ },
     { id: 'estate', name: '🏠 房地产 · 国内楼市', icon: '🏠', priority: 6, re: /房地产|地产|房产|楼市|房价/ },
@@ -57,8 +57,11 @@ const App = (function () {
     { id: 'policy', name: '📋 政策与监管', icon: '📋', priority: 6, re: /政策|监管|合规|法规|条例/ },
     { id: 'books', name: '📚 资源/知识推荐', icon: '📚', priority: 4, re: /资源|知识推荐|书籍|知识|书单|阅读|新书|播客/ },
     /* v10：📌 今日速览（brief）已删除 —— 简报开头的「今日背景一句话」已覆盖它的作用 */
-    { id: 'action', name: '💎 行动建议', icon: '💎', priority: 3, re: /行动|建议|预告|明日|待办|要做/ },
+    /* v10.1：💡 选题信号（原「🔮 AI发现」改名迁位），显示位置紧挨行动建议前面。
+       正则同时认「AI发现」，让历史简报里的旧标题也能落到本板块而不是掉进垃圾桶。 */
     { id: 'gap', name: '⚠️ 数据缺口', icon: '⚠️', priority: 2, re: /数据缺口|缺口|说明|备注/ },
+    { id: 'pick', name: '💡 选题信号', icon: '💡', priority: 8, re: /选题信号|选题|AI发现/ },
+    { id: 'action', name: '💎 行动建议', icon: '💎', priority: 3, re: /行动|建议|预告|明日|待办|要做/ },
     /* 兜底桶：仅供 sectionMap 回退取值，渲染循环里被显式跳过（v10：不再渲染「其他」垃圾板块） */
     { id: 'other', name: '🧩 其他', icon: '🧩', priority: 1, re: null }
   ];
