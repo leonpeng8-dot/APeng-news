@@ -940,3 +940,17 @@ html.is-uc .loading .spinner { animation-duration: 1s; }
 .section[data-section=macro] .item-content table {
   font-size: 12.5px;
 }
+/* === v3.5 修复：表格宽度按内容撑开，防止单元格重叠 === */
+@media (max-width: 640px) {
+  .item-content table {
+    display: block !important; overflow-x: auto !important;
+    width: max-content !important; max-width: 100% !important;
+    border-collapse: separate !important; border-spacing: 0;
+  }
+  .item-content table th,
+  .item-content table td {
+    min-width: 100px !important; max-width: 240px !important;
+    white-space: normal !important; word-break: break-word;
+    vertical-align: top !important;
+  }
+}
